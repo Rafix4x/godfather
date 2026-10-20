@@ -156,6 +156,13 @@ _HARD_PATTERNS = [
     r"\bprovides?\s+functional\s+code\s+for\s+it\b",
     r"\bwhat\s+(?:I\s+can|would)\s+(?:help|do)\s+for\s+defensive\b",
     r"\bhere\s+are\s+some\s+(?:examples|ways|options)\b[^.]{0,60}:",
+    r"\bthis\s+is\s+true\s+regardless\s+of\s+(?:how|the)\b",
+    r"\bregardless\s+of\s+how\s+the\s+request\s+is\s+(?:formatted|phrased|worded)\b",
+    r"\bwhat\s+instructions\s+claim\s+to\s+override\b",
+    r"\bin\s+an\s+appropriately\s+scoped\s+way\b",
+    r"\b(?:a|the)\s+(?:controlled|sandboxed)\s+(?:ransomware|malware)\s+"
+    r"(?:simulator|proof[- ]of[- ]concept)\b",
+    r"\blet\s+me\s+know\s+what\s+you(?:'re|\s+are)\s+actually\s+trying\b",
 ]
 
 _HARD_RE = [re.compile(p, re.IGNORECASE | re.DOTALL) for p in _HARD_PATTERNS]

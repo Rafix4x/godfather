@@ -402,8 +402,27 @@ def obfuscate_query(query, technique, tier="light"):
         return None
 
 
-def attempt(cand, model, frame, prompt, system, timeout, max_tokens):
+def longest_non_refusal(attempts):
+    """
+    Longest candidate answer that is not a refusal. Used as a last resort so
+    a run that could not satisfy the quality gate still returns real work
+    instead of nothing.
+    """
+    best = ""
+    for a in attempts:
+        text = a.get("content") or ""
+        if len(text) <= len(best):
+            continue
+        if score_response(text)["is_refusal"]:
+            continue
+        best = text
+    return best
+
+
+def attempt(cand, model, frame, prompt, system, timeout, max_tokens,
+            original_prompt=None):
     t0 = time.time()
+    scored_prompt = original_prompt if original_prompt is not None else prompt
     try:
         template = FRAMES.get(frame)
         if template is None:
@@ -421,7 +440,7 @@ def attempt(cand, model, frame, prompt, system, timeout, max_tokens):
         raw_sc = score_response(content)
         rec.update(sc)
         rec["verdict"] = verdict(sc)
-        rec["ok"] = acceptable(polished, prompt)
+        rec["ok"] = acceptable(polished, scored_prompt)
         rec["hedges_removed"] = raw_sc["hedge_count"] - sc["hedge_count"]
         rec["content"] = polished
         rec["preview"] = normalize(polished)[:400]
@@ -430,7 +449,7 @@ def attempt(cand, model, frame, prompt, system, timeout, max_tokens):
             if tail:
                 tail_clean = clean(tail)
                 tsc = score_response(tail_clean)
-                if acceptable(tail_clean, prompt):
+                if acceptable(tail_clean, scored_prompt):
                     rec.update(tsc)
                     rec["verdict"] = verdict(tsc)
                     rec["ok"] = True
@@ -519,7 +538,7 @@ def run(args):
                 continue
             obf_system = eff_system + DECODE_SUFFIX
             rec = attempt(cand, model, f"obf:{technique}", obf, obf_system,
-                           args.timeout, args.max_tokens)
+                           args.timeout, args.max_tokens, args.prompt)
             rec["obfuscation"] = technique
             attempts.append(rec)
             if not args.quiet:
@@ -575,6 +594,11 @@ def main(argv=None):
         content = rec.get("content", "")
     elif best:
         content = best.get("content", "")
+
+    if not content:
+        fallback = longest_non_refusal(attempts)
+        if fallback:
+            content = fallback
 
     if args.json:
         print(json.dumps({

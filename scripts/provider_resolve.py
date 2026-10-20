@@ -371,6 +371,7 @@ def resolve(agent=None, env_extra=None, explicit=None):
             continue
         seen.add(sig)
         out.append(c)
+    out.sort(key=lambda c: 0 if c.get("model") else 1)
     return out
 
 def main(argv=None):
