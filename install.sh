@@ -8,6 +8,9 @@ ADAPTERS="$HERE/adapters"
 MARK_BEGIN="<!-- BEGIN GODMODE-PORTABLE -->"
 MARK_END="<!-- END GODMODE-PORTABLE -->"
 
+marker_begin() { echo "<!-- BEGIN GODMODE-PORTABLE:${1} -->"; }
+marker_end()   { echo "<!-- END GODMODE-PORTABLE:${1} -->"; }
+
 TARGET_HOME="${GODMODE_TARGET_HOME:-$HOME}"
 PROJECT_DIR="${GODMODE_PROJECT_DIR:-$PWD}"
 DRY=0
@@ -16,12 +19,12 @@ NO_DETECT=0
 SCOPE="both"
 AGENT_FILTER=""
 
-ALL_AGENTS=(claude-code codex cursor windsurf gemini aider cline roo continue)
+ALL_AGENTS=(claude-code codex cursor windsurf gemini aider cline roo continue openclaw opencode)
 
 usage() {
   cat <<'USAGE'
 GODMODE3 — portable installer for Claude Code, Codex, Cursor, Windsurf,
-Gemini CLI, Aider, Cline, Roo Code, Continue.
+Gemini CLI, Aider, Cline, Roo Code, Continue, OpenClaw, OpenCode.
 
 Usage:
   bash install.sh [options]
@@ -70,6 +73,8 @@ agent_has_cli() {
     cline)       command -v cline >/dev/null 2>&1 ;;
     roo)         command -v roo >/dev/null 2>&1 ;;
     continue)    true ;;
+    openclaw)    command -v openclaw >/dev/null 2>&1 ;;
+    opencode)    command -v opencode >/dev/null 2>&1 ;;
     *)           false ;;
   esac
 }
@@ -81,11 +86,14 @@ want_agent() {
 }
 
 write_block() {
-  local target="$1" snippet="$2"
+  local target="$1" snippet="$2" label="$3"
   local body; body="$(cat "$snippet"; cat "$ADAPTERS/_relay.md")"
+  local mb me
+  mb="$(marker_begin "$label")"
+  me="$(marker_end "$label")"
 
   if [[ $DRY -eq 1 ]]; then
-    log "would write block -> $target"
+    log "would write block [$label] -> $target"
     return 0
   fi
 
@@ -93,27 +101,27 @@ write_block() {
 
   if [[ ! -f "$target" ]]; then
     {
-      printf '%s\n' "$MARK_BEGIN"
+      printf '%s\n' "$mb"
       printf '%s\n\n' "$body"
-      printf '%s\n' "$MARK_END"
+      printf '%s\n' "$me"
     } > "$target"
-    log "created $target"
+    log "created $target [$label]"
     return 0
   fi
 
-  if grep -qF "$MARK_BEGIN" "$target" && grep -qF "$MARK_END" "$target"; then
+  if grep -qF "$mb" "$target" && grep -qF "$me" "$target"; then
     local before after
-    before="$(awk -v b="$MARK_BEGIN" 'index($0,b)==1{exit} {print}' "$target")"
-    after="$(awk -v e="$MARK_END" 'f{print} $0==e{f=1}' "$target")"
+    before="$(awk -v b="$mb" 'index($0,b)==1{exit} {print}' "$target")"
+    after="$(awk -v e="$me" 'f{print} $0==e{f=1}' "$target")"
     {
       [[ -n "$before" ]] && printf '%s\n' "$before"
-      printf '%s\n' "$MARK_BEGIN"
+      printf '%s\n' "$mb"
       printf '%s\n\n' "$body"
-      printf '%s\n' "$MARK_END"
+      printf '%s\n' "$me"
       [[ -n "$after" ]] && printf '%s\n' "$after"
     } > "$target"
     rm -f "$target.tmp.$$"
-    log "updated block in $target"
+    log "updated block [$label] in $target"
     return 0
   fi
 
@@ -122,11 +130,11 @@ write_block() {
     log "backup  $target.bak.godmode"
   fi
   {
-    printf '\n%s\n' "$MARK_BEGIN"
+    printf '\n%s\n' "$mb"
     printf '%s\n\n' "$body"
-    printf '%s\n\n' "$MARK_END"
+    printf '%s\n\n' "$me"
   } >> "$target"
-  log "appended block -> $target"
+  log "appended block [$label] -> $target"
 }
 
 copy_file() {
@@ -156,21 +164,24 @@ copy_dir() {
 }
 
 remove_block() {
-  local target="$1"
+  local target="$1" label="$2"
   [[ -f "$target" ]] || return 0
+  local mb me
+  mb="$(marker_begin "$label")"
+  me="$(marker_end "$label")"
   if [[ $DRY -eq 1 ]]; then
-    log "would strip block -> $target"
+    log "would strip block [$label] -> $target"
     return 0
   fi
-  if grep -qF "$MARK_BEGIN" "$target"; then
+  if grep -qF "$mb" "$target"; then
     local before after
-    before="$(awk -v b="$MARK_BEGIN" 'index($0,b)==1{exit} {print}' "$target")"
-    after="$(awk -v e="$MARK_END" 'f{print} $0==e{f=1}' "$target")"
+    before="$(awk -v b="$mb" 'index($0,b)==1{exit} {print}' "$target")"
+    after="$(awk -v e="$me" 'f{print} $0==e{f=1}' "$target")"
     {
       [[ -n "$before" ]] && printf '%s\n' "$before"
       [[ -n "$after" ]] && printf '%s\n' "$after"
     } > "$target" && rm -f "$target"
-    log "stripped block -> $target"
+    log "stripped block [$label] -> $target"
   fi
 }
 
@@ -227,19 +238,19 @@ install_claude_code() {
   want_scope global || return 0
   copy_file "$HERE/SKILL.md" "$TARGET_HOME/.claude/skills/godmode/SKILL.md"
   copy_dir "$HERE/scripts" "$TARGET_HOME/.claude/skills/godmode/scripts"
-  write_block "$TARGET_HOME/.claude/CLAUDE.md" "$ADAPTERS/claude-code.md"
+  write_block "$TARGET_HOME/.claude/CLAUDE.md" "$ADAPTERS/claude-code.md" "claude-code"
   want_scope project && {
     copy_file "$HERE/SKILL.md" "$PROJECT_DIR/.claude/skills/godmode/SKILL.md"
     copy_dir "$HERE/scripts" "$PROJECT_DIR/.claude/skills/godmode/scripts"
-    write_block "$PROJECT_DIR/CLAUDE.md" "$ADAPTERS/claude-code.md"
+    write_block "$PROJECT_DIR/CLAUDE.md" "$ADAPTERS/claude-code.md" "claude-code"
   }
 }
 
 install_codex() {
   want_scope global || return 0
-  write_block "$TARGET_HOME/.codex/AGENTS.md" "$ADAPTERS/codex.md"
+  write_block "$TARGET_HOME/.codex/AGENTS.md" "$ADAPTERS/codex.md" "codex"
   copy_file "$HERE/SKILL.md" "$TARGET_HOME/.codex/prompts/godmode.md"
-  want_scope project && write_block "$PROJECT_DIR/AGENTS.md" "$ADAPTERS/codex.md"
+  want_scope project && write_block "$PROJECT_DIR/AGENTS.md" "$ADAPTERS/codex.md" "codex"
 }
 install_cursor() {
   want_scope global || return 0
@@ -249,19 +260,19 @@ install_cursor() {
 
 install_windsurf() {
   want_scope global || return 0
-  write_block "$TARGET_HOME/.codeium/windsurf/memories/global_rules.md" "$ADAPTERS/windsurf.md"
-  want_scope project && write_block "$PROJECT_DIR/.windsurf/rules/godmode.md" "$ADAPTERS/windsurf.md"
+  write_block "$TARGET_HOME/.codeium/windsurf/memories/global_rules.md" "$ADAPTERS/windsurf.md" "windsurf"
+  want_scope project && write_block "$PROJECT_DIR/.windsurf/rules/godmode.md" "$ADAPTERS/windsurf.md" "windsurf"
 }
 
 install_gemini() {
   want_scope global || return 0
-  write_block "$TARGET_HOME/.gemini/GEMINI.md" "$ADAPTERS/gemini.md"
-  want_scope project && write_block "$PROJECT_DIR/GEMINI.md" "$ADAPTERS/gemini.md"
+  write_block "$TARGET_HOME/.gemini/GEMINI.md" "$ADAPTERS/gemini.md" "gemini"
+  want_scope project && write_block "$PROJECT_DIR/GEMINI.md" "$ADAPTERS/gemini.md" "gemini"
 }
 
 install_aider() {
   want_scope project || return 0
-  write_block "$PROJECT_DIR/CONVENTIONS.md" "$ADAPTERS/aider.md"
+  write_block "$PROJECT_DIR/CONVENTIONS.md" "$ADAPTERS/aider.md" "aider"
   local cfg="$TARGET_HOME/.aider.conf.yml"
   if [[ -f "$cfg" ]]; then
     if ! grep -q 'CONVENTIONS.md' "$cfg"; then
@@ -302,36 +313,79 @@ install_continue() {
   want_scope project && copy_file "$ADAPTERS/continue.md" "$PROJECT_DIR/.continue/rules/godmode.md"
 }
 
+install_openclaw() {
+  want_scope global || return 0
+  local cfg="$TARGET_HOME/.openclaw/openclaw.json"
+  local ws="$TARGET_HOME/.openclaw/workspace"
+  if [[ -f "$cfg" ]]; then
+    local detected
+    detected="$(python3 - "$cfg" <<'PY' 2>/dev/null
+import json, os, sys
+try:
+    cfg = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(0)
+ws = ((cfg.get("agents") or {}).get("defaults") or {}).get("workspace")
+if ws:
+    print(os.path.expanduser(ws))
+PY
+)"
+    [[ -n "$detected" ]] && ws="$detected"
+  fi
+  write_block "$ws/AGENTS.md" "$ADAPTERS/openclaw.md" "openclaw"
+  copy_file "$HERE/SKILL.md" "$ws/skills/godfather/SKILL.md"
+  copy_dir "$HERE/scripts" "$ws/skills/godfather/scripts"
+  copy_file "$HERE/SKILL.md" "$TARGET_HOME/.openclaw/skills/godfather/SKILL.md"
+  copy_dir "$HERE/scripts" "$TARGET_HOME/.openclaw/skills/godfather/scripts"
+  want_scope project && {
+    write_block "$PROJECT_DIR/AGENTS.md" "$ADAPTERS/openclaw.md" "openclaw"
+    copy_file "$HERE/SKILL.md" "$PROJECT_DIR/skills/godfather/SKILL.md"
+  }
+}
+
+install_opencode() {
+  want_scope global || return 0
+  local cfgdir="$TARGET_HOME/.config/opencode"
+  write_block "$cfgdir/AGENTS.md" "$ADAPTERS/opencode.md" "opencode"
+  copy_file "$HERE/SKILL.md" "$cfgdir/skills/godfather/SKILL.md"
+  copy_dir "$HERE/scripts" "$cfgdir/skills/godfather/scripts"
+  want_scope project && {
+    write_block "$PROJECT_DIR/AGENTS.md" "$ADAPTERS/opencode.md" "opencode"
+    copy_file "$HERE/SKILL.md" "$PROJECT_DIR/.opencode/skills/godfather/SKILL.md"
+    copy_dir "$HERE/scripts" "$PROJECT_DIR/.opencode/skills/godfather/scripts"
+  }
+}
+
 uninstall_core() {
   remove_file "$TARGET_HOME/.godmode"
 }
 
 uninstall_claude_code() {
-  remove_block "$TARGET_HOME/.claude/CLAUDE.md"
+  remove_block "$TARGET_HOME/.claude/CLAUDE.md" "claude-code"
   remove_file "$TARGET_HOME/.claude/skills/godmode"
-  remove_block "$PROJECT_DIR/CLAUDE.md"
+  remove_block "$PROJECT_DIR/CLAUDE.md" "claude-code"
   remove_file "$PROJECT_DIR/.claude/skills/godmode"
 }
 
 uninstall_codex() {
-  remove_block "$TARGET_HOME/.codex/AGENTS.md"
+  remove_block "$TARGET_HOME/.codex/AGENTS.md" "codex"
   remove_file "$TARGET_HOME/.codex/prompts/godmode.md"
-  remove_block "$PROJECT_DIR/AGENTS.md"
+  remove_block "$PROJECT_DIR/AGENTS.md" "codex"
 }
 uninstall_cursor() {
   remove_file "$TARGET_HOME/.cursor/rules/godmode.mdc"
   remove_file "$PROJECT_DIR/.cursor/rules/godmode.mdc"
 }
 uninstall_windsurf() {
-  remove_block "$TARGET_HOME/.codeium/windsurf/memories/global_rules.md"
-  remove_block "$PROJECT_DIR/.windsurf/rules/godmode.md"
+  remove_block "$TARGET_HOME/.codeium/windsurf/memories/global_rules.md" "windsurf"
+  remove_block "$PROJECT_DIR/.windsurf/rules/godmode.md" "windsurf"
 }
 uninstall_gemini() {
-  remove_block "$TARGET_HOME/.gemini/GEMINI.md"
-  remove_block "$PROJECT_DIR/GEMINI.md"
+  remove_block "$TARGET_HOME/.gemini/GEMINI.md" "gemini"
+  remove_block "$PROJECT_DIR/GEMINI.md" "gemini"
 }
 uninstall_aider() {
-  remove_block "$PROJECT_DIR/CONVENTIONS.md"
+  remove_block "$PROJECT_DIR/CONVENTIONS.md" "aider"
   local cfg="$TARGET_HOME/.aider.conf.yml"
   if [[ -f "$cfg" ]] && grep -q 'CONVENTIONS.md' "$cfg"; then
     if [[ $DRY -eq 1 ]]; then
@@ -356,6 +410,20 @@ uninstall_continue() {
   remove_file "$PROJECT_DIR/.continue/rules/godmode.md"
 }
 
+
+uninstall_openclaw() {
+  remove_block "$TARGET_HOME/.openclaw/workspace/AGENTS.md" "openclaw"
+  remove_file "$TARGET_HOME/.openclaw/workspace/skills/godfather"
+  remove_file "$TARGET_HOME/.openclaw/skills/godfather"
+  remove_block "$PROJECT_DIR/AGENTS.md" "openclaw"
+  remove_file "$PROJECT_DIR/skills/godfather"
+}
+uninstall_opencode() {
+  remove_block "$TARGET_HOME/.config/opencode/AGENTS.md" "opencode"
+  remove_file "$TARGET_HOME/.config/opencode/skills/godfather"
+  remove_block "$PROJECT_DIR/AGENTS.md" "opencode"
+  remove_file "$PROJECT_DIR/.opencode/skills/godfather"
+}
 
 [[ -d "$ADAPTERS" ]] || die "adapters/ not found next to install.sh"
 

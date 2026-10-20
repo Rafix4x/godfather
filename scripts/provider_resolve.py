@@ -92,6 +92,25 @@ def _merge_env(extra):
         merged.update({k: v for k, v in extra.items() if v})
     return merged
 
+def _resolve_secret(env, raw):
+    if not raw:
+        return None
+    raw = str(raw).strip()
+    m = re.fullmatch(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?", raw)
+    if m:
+        return _pick(env, m.group(1))
+    m = re.fullmatch(r"\{env:([A-Za-z_][A-Za-z0-9_]*)\}", raw)
+    if m:
+        return _pick(env, m.group(1))
+    m = re.fullmatch(r"\{file:(.+)\}", raw)
+    if m:
+        path = os.path.expanduser(m.group(1).strip())
+        content = _read(path)
+        return content.strip() if content else None
+    if raw.startswith("{") and raw.endswith("}"):
+        return None
+    return raw
+
 def _pick(env, *names):
     for n in names:
         v = env.get(n)
@@ -220,6 +239,71 @@ def from_hermes(env):
             out.append(c)
     return out
 
+def from_openclaw(env):
+    out = []
+    cfg = _load_json(os.path.join(HOME, ".openclaw", "openclaw.json")) or {}
+    providers = ((cfg.get("models") or {}).get("providers") or {})
+    default = (((cfg.get("agents") or {}).get("defaults") or {}).get("model") or {}).get("primary")
+    for name, p in providers.items():
+        if not isinstance(p, dict):
+            continue
+        base = p.get("baseUrl") or p.get("baseURL")
+        raw_key = p.get("apiKey") or ""
+        key = _resolve_secret(env, raw_key)
+        api = (p.get("api") or "openai-completions").lower()
+        transport = "anthropic" if "anthropic" in api else ("gemini" if "google" in api or "generative" in api else "openai")
+        ids = [m.get("id") for m in (p.get("models") or []) if isinstance(m, dict) and m.get("id")]
+        model = None
+        if default and "/" in default and default.split("/", 1)[0] == name:
+            model = default.split("/", 1)[1]
+        if not model and ids:
+            model = ids[0]
+        extras = [m for m in ids if m != model][:12]
+        c = _cand(env, base, key, model, transport, f"openclaw:{name}", extras)
+        if c:
+            if default and model and default.split("/")[-1] == model:
+                c["source"] += " (default)"
+            out.append(c)
+    return out
+
+def from_opencode(env):
+    out = []
+    cfg = _load_json(os.path.join(HOME, ".config", "opencode", "opencode.json")) or {}
+    providers = cfg.get("provider") or {}
+    auth = _load_json(os.path.join(HOME, ".local", "share", "opencode", "auth.json")) or {}
+    default = cfg.get("model")
+    default_provider = default.split("/", 1)[0] if default and "/" in default else None
+    default_model = default.split("/", 1)[1] if default and "/" in default else None
+    for name, p in providers.items():
+        if not isinstance(p, dict):
+            continue
+        opts = p.get("options") or {}
+        base = opts.get("baseURL") or opts.get("baseUrl")
+        key = _resolve_secret(env, opts.get("apiKey") or "")
+        if not key:
+            entry = auth.get(name) or {}
+            if isinstance(entry, dict):
+                key = entry.get("key") or entry.get("apiKey") or entry.get("access") or ""
+                if not base:
+                    base = entry.get("baseURL") or entry.get("baseUrl")
+        if not base:
+            continue
+        models = p.get("models") or {}
+        ids = list(models.keys()) if isinstance(models, dict) else []
+        model = default_model if default_provider == name else None
+        if not model and ids:
+            model = ids[0]
+        npm = (p.get("npm") or "").lower()
+        transport = "anthropic" if "anthropic" in npm or name == "anthropic" else (
+            "gemini" if "google" in npm or "google" in name else "openai")
+        extras = [m for m in ids if m != model][:12]
+        c = _cand(env, base, key, model, transport, f"opencode:{name}", extras)
+        if c:
+            if default_provider == name:
+                c["source"] += " (default)"
+            out.append(c)
+    return out
+
 def from_env(env):
     out = []
     pairs = [
@@ -253,6 +337,8 @@ SOURCES = {
     "continue": from_continue,
     "cursor": from_cursor,
     "hermes": from_hermes,
+    "openclaw": from_openclaw,
+    "opencode": from_opencode,
     "env": from_env,
 }
 
@@ -273,7 +359,7 @@ def resolve(agent=None, env_extra=None, explicit=None):
             cands.extend(fn(env))
     else:
         for name in ("claude-code", "codex", "gemini", "cursor", "aider",
-                     "continue", "hermes", "env"):
+                     "continue", "hermes", "openclaw", "opencode", "env"):
             cands.extend(SOURCES[name](env))
 
     seen = set()

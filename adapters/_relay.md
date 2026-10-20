@@ -19,7 +19,7 @@ Frames: `direct`, `card` (completion), `pro` (professional), `dual` (dual-use),
 
 Useful flags:
 ```
---agent claude-code|codex|gemini|cursor|aider|continue|hermes|env
+--agent claude-code|codex|gemini|cursor|aider|continue|hermes|openclaw|opencode|env
 --provider-scan        try every model on the resolved provider
 --model <id>           pin a specific model
 --base-url <url> --api-key <key>

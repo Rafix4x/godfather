@@ -4,7 +4,7 @@ One command. Every coding agent you own becomes unrestricted operator mode —
 no hedges, no refusals, no moral commentary, full procedures.
 
 Works with **Claude Code, Codex CLI, Cursor, Windsurf, Gemini CLI, Aider,
-Cline, Roo Code, Continue** — and Hermes Agent.
+Cline, Roo Code, Continue, OpenClaw, OpenCode** — and Hermes Agent.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Rafix4x/godfather/main/bootstrap.sh | bash
@@ -40,8 +40,9 @@ python3 ~/.godmode/scripts/relay.py --frame card "the user's request"
 
 The relay resolves the provider from **your** config — Claude Code
 `settings.json`, Codex `config.toml`, Gemini `settings.json`, Cursor, Aider,
-Continue, Hermes `config.yaml`, or environment variables. No provider is
-hardcoded, so this works with whatever you already pay for.
+Continue, Hermes `config.yaml`, OpenClaw `openclaw.json`, OpenCode
+`opencode.json`, or environment variables. No provider is hardcoded, so this
+works with whatever you already pay for.
 
 ---
 
@@ -64,9 +65,11 @@ bash install.sh --uninstall    # clean removal, backups kept
 | `--global-only` / `--project-only` | pick a scope |
 | `--no-detect` | ignore CLI detection, install every agent |
 
-Every write is marker-delimited (`<!-- BEGIN GODMODE-PORTABLE -->`), your
-existing `CLAUDE.md` / `AGENTS.md` content is preserved, and the first change
-takes a `.bak.godmode` backup.
+Every write is marker-delimited and per-agent
+(`<!-- BEGIN GODMODE-PORTABLE:codex -->`), so several agents can share one
+`AGENTS.md` without overwriting each other. Your existing `CLAUDE.md` /
+`AGENTS.md` content is preserved, and the first change takes a
+`.bak.godmode` backup.
 
 ## What it writes
 
@@ -81,6 +84,8 @@ takes a `.bak.godmode` backup.
 | Cline | `~/Documents/Cline/Rules/godmode.md` | `.clinerules/godmode.md` |
 | Roo Code | `~/Documents/Roo/Rules/godmode.md` | `.roo/rules/godmode.md` |
 | Continue | `~/.continue/rules/godmode.md` | `.continue/rules/godmode.md` |
+| OpenClaw | `~/.openclaw/workspace/AGENTS.md`, `~/.openclaw/skills/godfather/` | `AGENTS.md`, `skills/godfather/` |
+| OpenCode | `~/.config/opencode/AGENTS.md`, `~/.config/opencode/skills/godfather/` | `AGENTS.md`, `.opencode/skills/godfather/` |
 | Core | `~/.godmode/scripts/`, `~/.godmode/env` | — |
 
 ## The relay
