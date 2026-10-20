@@ -64,6 +64,7 @@ bash install.sh --uninstall    # clean removal, backups kept
 README_LAYOUT_BLOCK = """
 bootstrap.sh                   one-line installer from GitHub
 install.sh                     installer / uninstaller
+install-termux.sh              alias for install.sh, kept for old bootstraps
 install-mcp.sh                 register the MCP server with your agents
 verify.sh                      run the self-verifying claims harness
 gf                             unified CLI (relay, clean, providers, verify)
@@ -138,6 +139,12 @@ CLAIMS = [
         "id": "termux_detected",
         "text": "There is no separate mobile installer. The same command works everywhere.",
         "check": "termux_detected",
+        "kind": "runtime",
+    },
+    {
+        "id": "termux_alias",
+        "text": "The alias runs the same installer.",
+        "check": "termux_alias_works",
         "kind": "runtime",
     },
     {
@@ -642,6 +649,31 @@ def check_every_reference_file_exists(claim):
     return True, "%d reference paths present" % len(wanted)
 
 
+def check_termux_alias_works(claim):
+    """
+    install-termux.sh stays as an alias so that a cached copy of the old
+    bootstrap still finds a file to run.
+    """
+    home = tempfile.mkdtemp(prefix="gf_alias_")
+    project = tempfile.mkdtemp(prefix="gf_alias_proj_")
+    try:
+        alias = os.path.join(REPO_ROOT, "install-termux.sh")
+        if not os.path.isfile(alias):
+            return False, "install-termux.sh is missing"
+        code, out, err = run_command(
+            ["bash", alias, "--no-detect",
+             "--target-home", home, "--project", project])
+        if code != 0:
+            return False, "the alias failed: %s" % (
+                err.strip()[:120] or out.strip()[:120])
+        if not os.path.isfile(os.path.join(home, ".godmode", "scripts", "relay.py")):
+            return False, "the alias did not install the runtime"
+        return True, "the alias installs the same runtime as install.sh"
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+        shutil.rmtree(project, ignore_errors=True)
+
+
 def check_termux_detected(claim):
     """
     The installer must detect Termux on its own and print the Termux steps,
@@ -962,6 +994,7 @@ CHECKS = {
     "logo_present": check_logo_present,
     "resolves_without_optional_deps": check_resolves_without_optional_deps,
     "termux_detected": check_termux_detected,
+    "termux_alias_works": check_termux_alias_works,
 }
 
 

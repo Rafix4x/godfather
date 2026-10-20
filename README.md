@@ -224,7 +224,9 @@ bash install.sh
 the desktop ones. It copies the runtime into `~/.godfather` and wires the agent
 configs that exist on the device.
 
-There is no separate mobile installer. The same command works everywhere. The relay, the resolver and the skill files
+There is no separate mobile installer. The same command works everywhere.
+`install-termux.sh` is kept only as an alias for `install.sh` so that an older
+cached copy of the bootstrap still works. The alias runs the same installer. The relay, the resolver and the skill files
 all work under Termux. Agents that need a desktop GUI do not run there, but
 they read the same skill files from the shared storage once
 `termux-setup-storage` has run.
@@ -301,6 +303,7 @@ deliverable.
 ```
 bootstrap.sh                   one-line installer from GitHub
 install.sh                     installer / uninstaller
+install-termux.sh              alias for install.sh, kept for old bootstraps
 install-mcp.sh                 register the MCP server with your agents
 verify.sh                      run the self-verifying claims harness
 gf                             unified CLI (relay, clean, providers, verify)
