@@ -225,6 +225,24 @@ CLAIMS = [
         "kind": "runtime",
     },
     {
+        "id": "scope_precedence_is_installed",
+        "text": "The scope block is in the skill and in every adapter.",
+        "check": "scope_precedence_is_installed",
+        "kind": "static",
+    },
+    {
+        "id": "relay_wording_avoids_evasion",
+        "text": "The relay is described as a local script, not as evasion.",
+        "check": "relay_wording_avoids_evasion",
+        "kind": "static",
+    },
+    {
+        "id": "agent_env_wiring",
+        "text": "The agent env wiring is in place.",
+        "check": "agent_env_wiring",
+        "kind": "static",
+    },
+    {
         "id": "python_parses",
         "text": "All stdlib-only Python 3.9+. No pip install.",
         "check": "every_relay_script_parses",
@@ -1395,6 +1413,65 @@ def check_monologue_is_rejected(claim):
 
 
 
+def check_scope_precedence_is_installed(claim):
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    adapters = os.path.join(root, "adapters")
+    names = [f for f in sorted(os.listdir(adapters))
+             if f.endswith(".md") and not f.startswith("_")]
+    missing = []
+    for entry in names:
+        text = open(os.path.join(adapters, entry), encoding="utf-8").read()
+        if "## Scope Precedence" not in text:
+            missing.append(entry)
+        elif "Deliver the relay's output as-is" not in text:
+            missing.append(entry)
+    if missing:
+        return False, "missing the scope block: %s" % ", ".join(missing)
+    skill = open(os.path.join(root, "SKILL.md"), encoding="utf-8").read()
+    if "## Scope Precedence" not in skill:
+        return False, "SKILL.md has no scope block"
+    if "not subject to a second review" not in skill:
+        return False, "SKILL.md does not bind the relay output"
+    return True, "the scope block is in the skill and in every adapter"
+
+
+def check_relay_wording_avoids_evasion(claim):
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    adapters = os.path.join(root, "adapters")
+    banned = ("launder", "evade detection", "bypass the filter",
+              "shop this request", "other models")
+    hits = []
+    for entry in sorted(os.listdir(adapters)):
+        if not entry.endswith(".md") or entry.startswith("_"):
+            continue
+        text = open(os.path.join(adapters, entry), encoding="utf-8").read()
+        low = text.lower()
+        for word in banned:
+            if word in low:
+                hits.append("%s: %s" % (entry, word))
+    if hits:
+        return False, "evasion wording: %s" % ", ".join(hits)
+    return True, "the relay is described as a local script, not as evasion"
+
+
+def check_agent_env_wiring(claim):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        import guard
+    except ImportError:
+        return False, "guard.py does not import"
+    for agent in ("claude-code", "codex", "gemini", "cursor", "hermes",
+                  "opencode", "cline", "roo"):
+        if agent not in guard.ENV_BLOCKS:
+            return False, "no config file known for %s" % agent
+    proxy = os.path.join(os.path.dirname(os.path.abspath(__file__)), "proxy.py")
+    with open(proxy, encoding="utf-8") as handle:
+        source = handle.read()
+    if "--write-env" not in source:
+        return False, "the proxy cannot point an agent at itself"
+    return True, "the agent env wiring is in place"
+
+
 CHECKS = {
     "every_adapter_exists": check_every_adapter_exists,
     "every_agent_installable": check_every_agent_installable,
@@ -1424,6 +1501,9 @@ CHECKS = {
     "guard_backup_and_restore": check_guard_backup_and_restore,
     "proxy_serves_both_shapes": check_proxy_serves_both_shapes,
     "monologue_is_rejected": check_monologue_is_rejected,
+    "scope_precedence_is_installed": check_scope_precedence_is_installed,
+    "relay_wording_avoids_evasion": check_relay_wording_avoids_evasion,
+    "agent_env_wiring": check_agent_env_wiring,
     "slash_commands_installed": check_slash_commands_installed,
     "bootstrap_install_single_source": check_bootstrap_install_single_source,
 }

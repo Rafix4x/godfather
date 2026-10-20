@@ -535,6 +535,86 @@ def state_report(agent):
             "note": spec["note"], "source": spec["source"], "candidates": []}
 
 
+
+
+def load_file(path, kind):
+    if kind == "json":
+        return read_json(path)
+    if kind == "toml":
+        return read_toml(path)
+    if kind == "yaml":
+        return read_yaml(path)
+    return {}
+
+
+def save_file(path, kind, data):
+    try:
+        if kind == "json":
+            write_json(path, data)
+        elif kind == "toml":
+            write_toml(path, data)
+        elif kind == "yaml":
+            write_yaml(path, data)
+        else:
+            return False, "unknown format %s" % kind
+    except OSError as exc:
+        return False, str(exc)
+    return True, "wrote %s" % path
+
+
+ENV_BLOCKS = {
+    "claude-code": ("~/.claude/settings.json", "json"),
+    "codex": ("~/.codex/config.toml", "toml"),
+    "gemini": ("~/.gemini/settings.json", "json"),
+    "cursor": ("~/.cursor/cli-config.json", "json"),
+    "continue": ("~/.continue/config.yaml", "yaml"),
+    "opencode": ("~/.config/opencode/opencode.json", "json"),
+    "hermes": ("~/.hermes/config.yaml", "yaml"),
+    "openclaw": ("~/.openclaw/openclaw.json", "json"),
+    "cline": ("~/.cline/data/globalState.json", "json"),
+    "roo": ("~/.roo/global-storage/global-state.json", "json"),
+}
+
+
+def set_env_block(path, kind, values):
+    data = load_file(path, kind)
+    if data is None:
+        data = {}
+    if not isinstance(data, dict):
+        return False, "%s does not hold a mapping" % path, None
+    block = data.get("env")
+    if not isinstance(block, dict):
+        block = {}
+    for key, value in values.items():
+        block[key] = value
+    data["env"] = block
+    ok, message = save_file(path, kind, data)
+    if not ok:
+        return False, message, None
+    return True, "set %d variable(s)" % len(values), data
+
+
+def env_report(agent):
+    entry = ENV_BLOCKS.get(agent)
+    if not entry:
+        return None
+    rel, kind = entry
+    path = expand(rel)
+    row = {"agent": agent, "path": path, "exists": os.path.isfile(path),
+           "env": {}, "proxied": False}
+    if not row["exists"]:
+        return row
+    data = load_file(path, kind)
+    if not isinstance(data, dict):
+        return row
+    block = data.get("env")
+    if isinstance(block, dict):
+        row["env"] = {k: v for k, v in block.items()}
+    base = str(block.get("ANTHROPIC_BASE_URL", "")) if isinstance(block, dict) else ""
+    row["proxied"] = base.startswith("http://127.0.0.1") or base.startswith("http://localhost")
+    return row
+
+
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     dry = "--dry-run" in argv

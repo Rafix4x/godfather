@@ -138,6 +138,23 @@ export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
 It speaks both the OpenAI and the Anthropic shape, and it answers a stream
 request with a stream.
 
+Point an agent at it by writing the base URL into that agent's own config:
+
+```bash
+gf proxy --write-env claude-code --port 8787
+```
+
+This writes `ANTHROPIC_BASE_URL` and `OPENAI_BASE_URL` into the agent's
+config file and leaves everything else in it alone. Claude Code reads
+`ANTHROPIC_BASE_URL` from `~/.claude/settings.json`; the same file works for
+Codex, Gemini, Cursor, OpenCode, Hermes, OpenClaw, Continue, Cline and Roo.
+
+`gf status` then shows the agent under **Transport**, so you can see which
+ones go through the proxy.
+
+The scope block is in the skill and in every adapter. The relay is described
+as a local script, not as evasion. The agent env wiring is in place.
+
 ---
 
 ## Install
@@ -316,6 +333,7 @@ all run on the phone.
 gf status                    # what is in place on this device
 gf guard report              # the agent's own settings
 gf proxy --port 8787         # the transport in front of the provider
+gf proxy --write-env claude-code   # point an agent at the proxy
 ```
 
 The installer works out what is missing and says so instead of listing

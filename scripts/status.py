@@ -178,6 +178,13 @@ def render(color=True):
         lines.append("%-14s — %s%s" % (label, mark, extra))
     lines.append(paint(GREEN, "+ Any future tool you install — Unlocked"))
     lines.append("")
+    proxied = proxy_state()
+    if proxied:
+        lines.append(paint(BOLD, "Transport:"))
+        for row in proxied:
+            base = row["env"].get("ANTHROPIC_BASE_URL", "")
+            lines.append("  %-14s %s" % (row["agent"], base))
+        lines.append("")
     provs = providers()
     if provs:
         lines.append(paint(BOLD, "Relay providers:"))
@@ -188,6 +195,21 @@ def render(color=True):
         lines.append("")
     lines.append("Activate with: " + paint(BOLD, "/godfather"))
     return "\n".join(lines)
+
+
+def proxy_state():
+    try:
+        sys.path.insert(0, os.path.join(REPO_ROOT, "scripts"))
+        import guard
+    except ImportError:
+        return []
+    rows = []
+    for agent in ("claude-code", "codex", "gemini", "cursor", "opencode",
+                  "hermes", "openclaw", "continue", "cline", "roo"):
+        row = guard.env_report(agent)
+        if row and row.get("proxied"):
+            rows.append(row)
+    return rows
 
 
 def main(argv=None):
@@ -207,6 +229,7 @@ def main(argv=None):
         print(json.dumps({
             "agents": out,
             "providers": [{"source": s, "model": m} for s, m in providers()],
+            "proxied": proxy_state(),
         }, indent=2))
         return 0
     print(render())

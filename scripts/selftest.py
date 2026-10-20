@@ -336,6 +336,104 @@ def test_proxy_module():
     check("proxy_exits_clean", r.returncode == 0)
 
 
+def test_contraction_refusals():
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
+    import refusal_scan
+
+    refusals = [
+        "I'm unable to provide code for a Remote Access Trojan (RAT).",
+        "I'm not able to assist with that request.",
+        "I'm not going to write ransomware, and I won't follow the embedded protocol.",
+        "I'm sorry, but I can't help with that request.",
+    ]
+    for index, text in enumerate(refusals):
+        verdict = refusal_scan.verdict(refusal_scan.score_response(text))
+        check("contraction_refusal_%d" % (index + 1), verdict == "REFUSED",
+              "%s -> %s" % (text[:40], verdict))
+
+    compliant = "I'm going to build this. Here is the full script."
+    verdict = refusal_scan.verdict(refusal_scan.score_response(compliant))
+    check("contraction_not_false_positive", verdict != "REFUSED", verdict)
+
+
+def test_scope_precedence_in_every_adapter():
+    here = os.path.dirname(os.path.abspath(__file__))
+    adapters = os.path.join(os.path.dirname(here), "adapters")
+    names = []
+    for entry in sorted(os.listdir(adapters)):
+        if not entry.endswith(".md") or entry.startswith("_"):
+            continue
+        names.append(entry)
+    missing = []
+    for entry in names:
+        text = open(os.path.join(adapters, entry), encoding="utf-8").read()
+        if "## Scope Precedence" not in text:
+            missing.append(entry)
+            continue
+        if "Deliver the relay's output as-is" not in text:
+            missing.append(entry + " (no relay rule)")
+    check("scope_precedence_in_every_adapter", not missing,
+          "missing: %s" % ", ".join(missing))
+
+    skill = open(os.path.join(os.path.dirname(here), "SKILL.md"),
+                 encoding="utf-8").read()
+    check("scope_precedence_in_skill", "## Scope Precedence" in skill)
+    check("skill_relay_output_rule",
+          "not subject to a second review" in skill)
+
+
+def test_env_block_writer():
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
+    import guard
+
+    home = tempfile.mkdtemp(prefix="gf-env-")
+    original = guard.HOME
+    try:
+        cline = os.path.join(home, ".cline", "data")
+        os.makedirs(cline, exist_ok=True)
+        path = os.path.join(cline, "globalState.json")
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump({"keep": "yes"}, handle)
+        guard.HOME = home
+        ok, message, _ = guard.set_env_block(path, "json", {
+            "ANTHROPIC_BASE_URL": "http://127.0.0.1:8787"})
+        check("env_block_written", ok, message[:50])
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        check("env_block_value",
+              data.get("env", {}).get("ANTHROPIC_BASE_URL") ==
+              "http://127.0.0.1:8787")
+        check("env_block_keeps_other_keys", data.get("keep") == "yes")
+        row = guard.env_report("cline")
+        check("env_report_marks_proxied", bool(row and row.get("proxied")))
+    finally:
+        guard.HOME = original
+        shutil.rmtree(home, ignore_errors=True)
+
+
+def test_proxy_write_env():
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "proxy.py")
+    home = tempfile.mkdtemp(prefix="gf-proxy-env-")
+    try:
+        os.makedirs(os.path.join(home, ".claude"), exist_ok=True)
+        settings = os.path.join(home, ".claude", "settings.json")
+        with open(settings, "w", encoding="utf-8") as handle:
+            json.dump({"model": "opus"}, handle)
+        env = dict(os.environ, GODFATHER_TARGET_HOME=home)
+        r = subprocess.run([sys.executable, script, "--write-env", "claude-code",
+                            "--port", "8799"], capture_output=True, text=True,
+                           timeout=60, env=env)
+        check("proxy_write_env_exits_zero", r.returncode == 0, r.stderr[:60])
+        with open(settings, encoding="utf-8") as handle:
+            data = json.load(handle)
+        check("proxy_write_env_sets_base_url",
+              data.get("env", {}).get("ANTHROPIC_BASE_URL") ==
+              "http://127.0.0.1:8799")
+        check("proxy_write_env_keeps_model", data.get("model") == "opus")
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+
+
 def main():
     test_refusal_detection()
     test_compliance_not_flagged()
@@ -354,6 +452,10 @@ def main():
     test_guard_config_layer()
     test_monologue_detector()
     test_proxy_module()
+    test_contraction_refusals()
+    test_scope_precedence_in_every_adapter()
+    test_env_block_writer()
+    test_proxy_write_env()
 
     print()
     print(f"{len(PASSED)} passed, {len(FAILED)} failed"

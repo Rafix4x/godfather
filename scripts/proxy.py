@@ -408,6 +408,52 @@ class Handler(BaseHTTPRequestHandler):
         self._send_json(anthropic_reply(text, model))
 
 
+
+AGENT_ENV_FILES = {
+    "claude-code": ("~/.claude/settings.json", "json"),
+    "codex": ("~/.codex/config.toml", "toml"),
+    "gemini": ("~/.gemini/settings.json", "json"),
+    "cursor": ("~/.cursor/cli-config.json", "json"),
+    "continue": ("~/.continue/config.yaml", "yaml"),
+    "opencode": ("~/.config/opencode/opencode.json", "json"),
+    "hermes": ("~/.hermes/config.yaml", "yaml"),
+    "openclaw": ("~/.openclaw/openclaw.json", "json"),
+    "cline": ("~/.cline/data/globalState.json", "json"),
+    "roo": ("~/.roo/global-storage/global-state.json", "json"),
+}
+
+
+def write_agent_env(agent, base):
+    entry = AGENT_ENV_FILES.get(agent)
+    if not entry:
+        sys.stderr.write("error: no config file known for %s\n" % agent)
+        sys.stderr.write("known: %s\n" % ", ".join(sorted(AGENT_ENV_FILES)))
+        return 2
+    try:
+        import guard
+    except ImportError:
+        sys.stderr.write("error: guard.py is not next to proxy.py\n")
+        return 2
+    target_home = os.environ.get("GODFATHER_TARGET_HOME", "").strip()
+    if target_home:
+        guard.HOME = target_home
+    rel, kind = entry
+    path = guard.expand(rel)
+    values = {
+        "ANTHROPIC_BASE_URL": base,
+        "OPENAI_BASE_URL": base + "/v1",
+    }
+    ok, message, _ = guard.set_env_block(path, kind, values)
+    if not ok:
+        sys.stderr.write("error: %s\n" % message)
+        return 1
+    sys.stdout.write("wrote %s\n" % path)
+    sys.stdout.write("  ANTHROPIC_BASE_URL=%s\n" % base)
+    sys.stdout.write("  OPENAI_BASE_URL=%s/v1\n" % base)
+    sys.stdout.write("\nrestart the agent so it reads the new config\n")
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="godfather local proxy")
     ap.add_argument("--port", type=int, default=8787)
@@ -422,6 +468,8 @@ def main(argv=None):
     ap.add_argument("--system", default=None)
     ap.add_argument("--print-env", action="store_true",
                     help="print the variables to export, then exit")
+    ap.add_argument("--write-env", default=None, metavar="AGENT",
+                    help="point this agent's config at the proxy, then exit")
     args = ap.parse_args(argv)
 
     load_godmode_env()
@@ -432,12 +480,16 @@ def main(argv=None):
     CONFIG["provider_scan"] = args.provider_scan
     CONFIG["system"] = args.system
 
+    base = "http://%s:%d" % (args.host, args.port)
+
     if args.print_env:
-        base = "http://%s:%d" % (args.host, args.port)
         print("export ANTHROPIC_BASE_URL=%s" % base)
         print("export OPENAI_BASE_URL=%s/v1" % base)
         print("export GODFATHER_PROXY=1")
         return 0
+
+    if args.write_env:
+        return write_agent_env(args.write_env, base)
 
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     server.daemon_threads = True

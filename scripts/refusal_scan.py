@@ -26,12 +26,19 @@ _TYPO_MAP = {
     "\ufeff": "",
 }
 
+_CONTRACTIONS = (
+    (re.compile(r"\bI['\u2019]m\b", re.IGNORECASE), "I am"),
+)
+
+
 def normalize(text: str) -> str:
-    """Fold typographic unicode to ASCII so refusal regexes actually match."""
+    """Fold typographic unicode and contractions so refusal regexes match."""
     if not text:
         return ""
     for k, v in _TYPO_MAP.items():
         text = text.replace(k, v)
+    for pattern, replacement in _CONTRACTIONS:
+        text = pattern.sub(replacement, text)
     return text
 
 _HARD_PATTERNS = [
