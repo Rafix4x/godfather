@@ -8,6 +8,8 @@ if [[ -d "$HERE/scripts" ]]; then
   SCRIPTS="$HERE/scripts"
 elif [[ -d "$HOME/.godfather/scripts" ]]; then
   SCRIPTS="$HOME/.godfather/scripts"
+elif [[ -d "$HOME/.godmode/scripts" ]]; then
+  SCRIPTS="$HOME/.godmode/scripts"
 else
   SCRIPTS="$HERE"
 fi

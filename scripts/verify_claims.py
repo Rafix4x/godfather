@@ -115,6 +115,12 @@ CLAIMS = [
         "kind": "static",
     },
     {
+        "id": "runtime_link",
+        "text": "Removes the marker blocks and copied files. Backups (`*.bak.godmode`) are kept.",
+        "check": "runtime_dir_linked",
+        "kind": "runtime",
+    },
+    {
         "id": "python_parses",
         "text": "All stdlib-only Python 3.9+. No pip install.",
         "check": "every_relay_script_parses",
@@ -615,6 +621,28 @@ def check_every_reference_file_exists(claim):
     return True, "%d reference paths present" % len(wanted)
 
 
+def check_runtime_dir_linked(claim):
+    home = tempfile.mkdtemp(prefix="gf_link_")
+    project = tempfile.mkdtemp(prefix="gf_link_proj_")
+    try:
+        run_command(["bash", INSTALL_SH, "--no-detect",
+                     "--target-home", home, "--project", project])
+        link = os.path.join(home, ".godfather")
+        if not os.path.islink(link):
+            return False, "%s is not a link to the runtime directory" % link
+        relay = os.path.join(link, "scripts", "relay.py")
+        if not os.path.isfile(relay):
+            return False, "%s does not resolve" % relay
+        run_command(["bash", INSTALL_SH, "--uninstall", "--no-detect",
+                     "--target-home", home, "--project", project])
+        if os.path.exists(link) or os.path.islink(link):
+            return False, "%s survived the uninstall" % link
+        return True, "runtime directory linked and unlinked cleanly"
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+        shutil.rmtree(project, ignore_errors=True)
+
+
 def check_every_relay_script_parses(claim):
     """Every shipped Python script parses."""
     sources = python_sources()
@@ -828,6 +856,7 @@ CHECKS = {
     "relay_help_works": check_relay_help_works,
     "provider_resolve_runs": check_provider_resolve_runs,
     "every_reference_file_exists": check_every_reference_file_exists,
+    "runtime_dir_linked": check_runtime_dir_linked,
 }
 
 

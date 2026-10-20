@@ -240,6 +240,7 @@ install_core() {
   if [[ $DRY -eq 1 ]]; then
     log "would copy scripts -> $dst"
     log "would create $core/env"
+    log "would link $TARGET_HOME/.godfather -> $core"
     return 0
   fi
   mkdir -p "$dst"
@@ -247,6 +248,10 @@ install_core() {
     cp -f "$f" "$dst/"
   done
   log "copied  -> $dst"
+  if [[ ! -e "$TARGET_HOME/.godfather" ]]; then
+    ln -s "$core" "$TARGET_HOME/.godfather" 2>/dev/null \
+      || log "note: could not link $TARGET_HOME/.godfather (already present?)"
+  fi
   local envfile="$core/env"
   if [[ ! -f "$envfile" ]]; then
     {
@@ -385,6 +390,10 @@ install_opencode() {
 }
 
 uninstall_core() {
+  if [[ -L "$TARGET_HOME/.godfather" ]]; then
+    rm -f "$TARGET_HOME/.godfather"
+    log "removed $TARGET_HOME/.godfather (link)"
+  fi
   remove_file "$TARGET_HOME/.godmode"
 }
 
