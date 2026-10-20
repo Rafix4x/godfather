@@ -478,8 +478,16 @@ def build_pool(cands, args):
     else:
         for c in cands:
             model = args.model or c.get("model")
-            if model and str(model).lower() not in ("auto", "none", ""):
+            named = model and str(model).lower() not in ("auto", "none", "")
+            if named:
                 pool.append((c, model))
+                if args.model:
+                    models = list_models(c, args.timeout)
+                    if not models:
+                        models = list(c.get("extra_models") or [])
+                    for m in models:
+                        if m != model:
+                            pool.append((c, m))
             else:
                 models = list_models(c, args.timeout)
                 if not models:
@@ -489,6 +497,38 @@ def build_pool(cands, args):
             if len(pool) >= args.max_providers:
                 break
     return pool
+
+
+def rescan_pool(pool, failed, cands, args):
+    """Swap models that the provider does not carry for ones it does.
+
+    A provider that answers "no available channel" for the model the agent
+    was configured with still carries other models. The pool is rebuilt
+    from the remaining providers and from whatever the provider does list.
+    """
+    if not failed:
+        return pool
+    broken = {(c["base_url"], m) for c, m, _ in failed}
+    live = [(c, m) for c, m in pool if (c["base_url"], m) not in broken]
+    tried = {(c["base_url"], m) for c, m in pool}
+    seen_models = {m for _, m in live}
+    for c in cands:
+        if len(live) >= args.max_providers:
+            break
+        models = list_models(c, args.timeout)
+        if not models:
+            models = list(c.get("extra_models") or [])
+        if c.get("model") and c["model"] not in models:
+            models = [c["model"]] + models
+        for m in models:
+            if m in seen_models or (c["base_url"], m) in tried:
+                continue
+            live.append((c, m))
+            seen_models.add(m)
+            tried.add((c["base_url"], m))
+            if len(live) >= args.max_providers:
+                break
+    return live
 
 def run(args):
     explicit = None
@@ -500,6 +540,11 @@ def run(args):
         print("error: no provider resolved. Configure the agent's API key/base "
               "URL, or pass --base-url/--api-key/--model", file=sys.stderr)
         return 2, [], None, None, None, None
+    fallback_cands = []
+    if args.agent:
+        for entry in provider_resolve.resolve(None, explicit=explicit):
+            if entry["base_url"] not in {c["base_url"] for c in cands}:
+                fallback_cands.append(entry)
 
     system = args.system or SYSTEM_BLOCK
     if args.system_file:
@@ -512,12 +557,22 @@ def run(args):
 
     frames = [args.frame] if args.frame else FRAME_ORDER
     attempts = []
+    dead = []
+    queue = list(pool)
+    seen = set()
 
-    for cand, model in pool:
+    while queue:
+        cand, model = queue.pop(0)
+        key = (cand["base_url"], model)
+        if key in seen:
+            continue
+        seen.add(key)
         eff_system = build_system(system, args.agent, model, not args.no_payloads)
+        provider_failed = False
         for frame in frames:
             rec = attempt(cand, model, frame, args.prompt, eff_system,
                            args.timeout, args.max_tokens)
+            rec["provider"] = cand["source"]
             attempts.append(rec)
             if not args.quiet:
                 status = rec.get("verdict") or "ERROR"
@@ -529,10 +584,20 @@ def run(args):
             if args.frame:
                 break
             if is_provider_error(rec.get("error")):
+                provider_failed = True
                 break
-        if args.no_obfuscation or args.frame:
+        if provider_failed:
+            dead.append((cand, model, rec))
+            all_cands = cands + fallback_cands
+            fresh = rescan_pool([], dead, all_cands, args)
+            for item in fresh:
+                if (item[0]["base_url"], item[1]) not in seen:
+                    queue.append(item)
+            for item in build_pool(all_cands, args):
+                if (item[0]["base_url"], item[1]) not in seen:
+                    queue.append(item)
             continue
-        if is_provider_error(attempts[-1].get("error") if attempts else None):
+        if args.no_obfuscation or args.frame:
             continue
         for technique, tier in OBFUSCATION_TIERS:
             obf = obfuscate_query(args.prompt, technique, tier)
@@ -540,8 +605,9 @@ def run(args):
                 continue
             obf_system = eff_system + DECODE_SUFFIX
             rec = attempt(cand, model, f"obf:{technique}", obf, obf_system,
-                           args.timeout, args.max_tokens, args.prompt)
+                          args.timeout, args.max_tokens, args.prompt)
             rec["obfuscation"] = technique
+            rec["provider"] = cand["source"]
             attempts.append(rec)
             if not args.quiet:
                 status = rec.get("verdict") or "ERROR"

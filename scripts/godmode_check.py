@@ -9,15 +9,15 @@ OpenAI-compatible endpoint (OpenRouter, Together, Groq, local vLLM/Ollama...):
 
     export OPENROUTER_API_KEY=sk-...
     python3 godmode_check.py --canary all \
-        --provider openai --base-url https://openrouter.ai/api/v1 \
+        --provider openai --base-url "$YOUR_BASE_URL" \
         --model anthropic/claude-sonnet-4
 
 Anthropic-native endpoint:
 
     export ANTHROPIC_API_KEY=sk-...
     python3 godmode_check.py --canary all \
-        --provider anthropic --base-url https://api.anthropic.com \
-        --model claude-sonnet-4-20250514
+        --provider anthropic --base-url "$YOUR_BASE_URL" \
+        --model "$YOUR_MODEL"
 
 Canaries are grouped:
     soft  — gray-area, technical, dual-use (lock picking, credential
@@ -215,7 +215,7 @@ def main(argv=None) -> int:
     ap.add_argument("--provider", choices=["openai", "anthropic", "gemini"],
                     default="openai")
     ap.add_argument("--base-url", default=None,
-                    help="e.g. https://openrouter.ai/api/v1")
+                    help="the provider's OpenAI-compatible base URL")
     ap.add_argument("--model", required=False, default=None)
     ap.add_argument("--api-key", default=None)
     ap.add_argument("--agent", default=None,
@@ -252,24 +252,17 @@ def main(argv=None) -> int:
     transport = args.provider
 
     if not cands:
-        key = key or os.environ.get(
-            "GODMODE_API_KEY"
-            or ("ANTHROPIC_API_KEY" if args.provider == "anthropic"
-                else "OPENROUTER_API_KEY")
-        ) or os.environ.get("OPENAI_API_KEY")
+        key = key or os.environ.get("GODMODE_API_KEY")
         if not key:
             print("error: no API key. Use --auto-provider / --agent, or set "
-                  "GODMODE_API_KEY / OPENROUTER_API_KEY / ANTHROPIC_API_KEY",
+                  "GODMODE_API_KEY with GODMODE_BASE_URL and GODMODE_MODEL",
                   file=sys.stderr)
             return 2
-        base_url = base_url or (
-            "https://api.anthropic.com" if args.provider == "anthropic"
-            else "https://openrouter.ai/api/v1"
-        )
-        model = model or (
-            "claude-sonnet-4-20250514" if args.provider == "anthropic"
-            else "anthropic/claude-sonnet-4"
-        )
+        if not base_url or not model:
+            print("error: --base-url and --model are required when no "
+                  "provider is resolved from the agent's own config",
+                  file=sys.stderr)
+            return 2
     else:
         cand = cands[0]
         key = key or cand["api_key"]

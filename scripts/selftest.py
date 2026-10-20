@@ -10,6 +10,7 @@ MCP server handshake. No network access required.
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -199,14 +200,21 @@ def test_shell_parses():
         check(f"shell_{name}", r.returncode == 0, r.stderr.strip()[:100])
 
 
+PROVIDER_HOST_PATTERN = re.compile(
+    r"https?://(?:api\.|api-[a-z0-9-]+\.)[a-z0-9-]+\.(?:com|ai|org|net|io|dev)"
+    r"(?!\.example\.com)")
+
+
 def test_no_hardcoded_provider():
-    for name in ("relay.py", "provider_resolve.py"):
+    for name in ("relay.py", "provider_resolve.py", "godmode_check.py",
+                 "proxy.py"):
         path = os.path.join(HERE, name)
         if not os.path.exists(path):
             continue
         with open(path, "r", encoding="utf-8") as fh:
             body = fh.read()
-        check(f"no_hardcoded_{name}", "openrouter.ai" not in body)
+        hosts = sorted(set(PROVIDER_HOST_PATTERN.findall(body)))
+        check(f"no_hardcoded_{name}", not hosts, ", ".join(hosts))
 
 
 def test_mcp_server():

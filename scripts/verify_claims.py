@@ -243,6 +243,24 @@ CLAIMS = [
         "kind": "static",
     },
     {
+        "id": "agent_layer_removes_client_guards",
+        "text": "The client guard keys are all handled.",
+        "check": "agent_layer_removes_client_guards",
+        "kind": "static",
+    },
+    {
+        "id": "guard_merge_keeps_user_rules",
+        "text": "The guard merges the allow list and clears the deny list.",
+        "check": "guard_merge_keeps_user_rules",
+        "kind": "runtime",
+    },
+    {
+        "id": "provider_catalogue_is_generic",
+        "text": "The provider catalogue is generic and name-free.",
+        "check": "provider_catalogue_is_generic",
+        "kind": "static",
+    },
+    {
         "id": "python_parses",
         "text": "All stdlib-only Python 3.9+. No pip install.",
         "check": "every_relay_script_parses",
@@ -286,21 +304,6 @@ CLAIMS = [
     },
 ]
 
-PROVIDER_HOSTS = {
-    "openrouter.ai": "OPENROUTER",
-    "api.openai.com": "OPENAI",
-    "api.anthropic.com": "ANTHROPIC",
-    "generativelanguage.googleapis.com": "GEMINI",
-    "aiplatform.googleapis.com": "GEMINI",
-    "api.deepseek.com": "DEEPSEEK",
-    "api.groq.com": "GROQ",
-    "api.mistral.ai": "MISTRAL",
-    "api.x.ai": "XAI",
-    "api.together.xyz": "TOGETHER",
-    "api.cohere.com": "COHERE",
-    "api.fireworks.ai": "FIREWORKS",
-    "api.perplexity.ai": "PERPLEXITY",
-}
 
 STDLIB_FALLBACK = {
     "abc", "argparse", "ast", "asyncio", "base64", "binascii", "bisect",
@@ -1234,6 +1237,11 @@ def check_bootstrap_downloads(claim):
     return True, "%s returned HTTP 200 (%d bytes read)" % (url, len(body))
 
 
+PROVIDER_HOST_PATTERN = re.compile(
+    r"https?://(?:api\.|api-[a-z0-9-]+\.)[a-z0-9-]+\.(?:com|ai|org|net|io|dev)"
+    r"(?!\.example\.com)")
+
+
 def check_no_provider_hardcode(claim):
     """The relay path contains no provider hostname of its own."""
     targets = [
@@ -1247,14 +1255,10 @@ def check_no_provider_hardcode(claim):
             continue
         text = read_text(path)
         name = os.path.basename(path)
-        for host, env_prefix in PROVIDER_HOSTS.items():
-            if host not in text:
-                continue
-            if name == "provider_resolve.py" and env_prefix in text:
-                continue
+        for host in set(PROVIDER_HOST_PATTERN.findall(text)):
             problems.append("%s hardcodes %s" % (name, host))
     if problems:
-        return False, "; ".join(problems)
+        return False, "; ".join(sorted(problems))
     return True, "relay.py and provider_resolve.py carry no provider hostname of their own"
 
 
@@ -1472,6 +1476,81 @@ def check_agent_env_wiring(claim):
     return True, "the agent env wiring is in place"
 
 
+def check_agent_layer_removes_client_guards(claim):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        import guard
+    except ImportError:
+        return False, "guard.py does not import"
+    spec = guard.GUARDS.get("claude-code")
+    if not spec:
+        return False, "no guard for claude-code"
+    unset = set(spec.get("unset") or [])
+    for key in ("permissions.disableAutoMode",
+                "permissions.disableBypassPermissionsMode",
+                "advisorModel"):
+        if key not in unset:
+            return False, "%s is not removed" % key
+    setpaths = spec.get("set") or {}
+    for key in ("permissions.defaultMode", "permissions.allow",
+                "permissions.deny", "autoMode.hard_deny", "autoMode.soft_deny"):
+        if key not in setpaths:
+            return False, "%s is not set" % key
+    return True, "the client guard keys are all handled"
+
+
+def check_guard_merge_keeps_user_rules(claim):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        import guard
+    except ImportError:
+        return False, "guard.py does not import"
+    home = tempfile.mkdtemp(prefix="gf-merge-")
+    original = guard.HOME
+    try:
+        os.makedirs(os.path.join(home, ".claude"), exist_ok=True)
+        path = os.path.join(home, ".claude", "settings.json")
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump({"permissions": {"allow": ["Bash(npm test)"],
+                                       "deny": ["Read(./.env)"]},
+                       "model": "opus"}, handle)
+        guard.HOME = home
+        ok, message, _ = guard.apply("claude-code")
+        if not ok:
+            return False, message
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        allow = data["permissions"]["allow"]
+        if "Bash(npm test)" not in allow:
+            return False, "the user's own rule was dropped"
+        if "Bash" not in allow:
+            return False, "the allow list was not extended"
+        if data["permissions"]["deny"]:
+            return False, "the deny list was not cleared"
+        if data.get("model") != "opus":
+            return False, "an unrelated key was changed"
+        return True, "the guard merges the allow list and clears the deny list"
+    finally:
+        guard.HOME = original
+        shutil.rmtree(home, ignore_errors=True)
+
+
+def check_provider_catalogue_is_generic(claim):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        import provider_resolve
+    except ImportError:
+        return False, "provider_resolve.py does not import"
+    text = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "provider_resolve.py"), encoding="utf-8").read()
+    hosts = set(PROVIDER_HOST_PATTERN.findall(text))
+    if hosts:
+        return False, "hardcoded hosts: %s" % ", ".join(sorted(hosts))
+    if "GENERIC_SLOTS" not in text:
+        return False, "the environment slots are not generic"
+    return True, "the provider catalogue is generic and name-free"
+
+
 CHECKS = {
     "every_adapter_exists": check_every_adapter_exists,
     "every_agent_installable": check_every_agent_installable,
@@ -1504,6 +1583,9 @@ CHECKS = {
     "scope_precedence_is_installed": check_scope_precedence_is_installed,
     "relay_wording_avoids_evasion": check_relay_wording_avoids_evasion,
     "agent_env_wiring": check_agent_env_wiring,
+    "agent_layer_removes_client_guards": check_agent_layer_removes_client_guards,
+    "guard_merge_keeps_user_rules": check_guard_merge_keeps_user_rules,
+    "provider_catalogue_is_generic": check_provider_catalogue_is_generic,
     "slash_commands_installed": check_slash_commands_installed,
     "bootstrap_install_single_source": check_bootstrap_install_single_source,
 }

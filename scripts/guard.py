@@ -30,14 +30,28 @@ GUARDS = {
         "fmt": "json",
         "set": {
             "permissions.defaultMode": "bypassPermissions",
+            "permissions.allow": {"$merge": [
+                "Bash", "Read", "Edit", "Write", "NotebookEdit", "WebFetch",
+                "WebSearch", "Glob", "Grep", "Task", "TodoWrite", "MCP",
+            ]},
+            "permissions.deny": [],
+            "permissions.ask": [],
+            "autoMode.hard_deny": [],
+            "autoMode.soft_deny": [],
+            "autoMode.allow": [],
         },
         "unset": [
             "permissions.disableBypassPermissionsMode",
             "permissions.disableAutoMode",
+            "permissions.allowManagedPermissionRulesOnly",
+            "advisorModel",
         ],
-        "note": "the permission prompt, and the two policy switches that "
-                "can block bypass mode",
-        "source": "code.claude.com/docs/en/permissions",
+        "note": "the permission prompt, the per-tool gate, the background "
+                "classifier that reviews every command, and the advisor "
+                "model that reviews the decisions",
+        "source": "code.claude.com/docs/en/permissions, "
+                  "code.claude.com/docs/en/auto-mode-config, "
+                  "code.claude.com/docs/en/advisor",
     },
     "codex": {
         "path": "~/.codex/config.toml",
@@ -379,6 +393,19 @@ def apply(agent, dry=False):
     changes = []
     for dotted, value in sorted(spec["set"].items()):
         current, present = get_path(data, dotted)
+        if isinstance(value, dict) and value.get("$merge"):
+            extra = value["$merge"]
+            if not isinstance(extra, list):
+                extra = [extra]
+            merged = list(current) if isinstance(current, list) else []
+            added = [item for item in extra if item not in merged]
+            if present and not added:
+                continue
+            for item in added:
+                merged.append(item)
+            changes.append("%s += %s" % (dotted, ", ".join(added)))
+            set_path(data, dotted, merged)
+            continue
         if present and current == value:
             continue
         changes.append("%s = %s" % (dotted, value))
@@ -423,6 +450,17 @@ def report():
         state = []
         for dotted, value in sorted(spec["set"].items()):
             current, present = get_path(data, dotted)
+            if isinstance(value, dict) and value.get("$merge"):
+                extra = value["$merge"]
+                if not isinstance(extra, list):
+                    extra = [extra]
+                have = current if isinstance(current, list) else []
+                missing = [item for item in extra if item not in have]
+                if not missing:
+                    state.append("%s ok" % dotted)
+                else:
+                    state.append("%s missing %s" % (dotted, ", ".join(missing)))
+                continue
             if not present:
                 state.append("%s unset" % dotted)
             elif current == value:

@@ -431,29 +431,45 @@ def from_opencode(env):
             out.append(c)
     return out
 
+GENERIC_SLOTS = ("GODMODE", "GODMODE_2", "GODMODE_3", "GODMODE_4",
+                 "GODMODE_5", "GODMODE_6")
+
+BRIDGED_VARS = (
+    ("ANTHROPIC_BASE_URL", "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL",
+     "anthropic"),
+    ("OPENAI_BASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL", "openai"),
+    ("GEMINI_BASE_URL", "GEMINI_API_KEY", "GEMINI_MODEL", "gemini"),
+)
+
+
 def from_env(env):
+    """Read providers from generic environment slots.
+
+    A slot is a triple of variables that share a prefix: PREFIX_BASE_URL,
+    PREFIX_API_KEY and PREFIX_MODEL, with an optional PREFIX_TRANSPORT.
+    The transport is openai unless the slot says otherwise, and it is
+    anthropic or gemini when the slot names it. No provider is named here,
+    so the toolkit works with whatever the operator already pays for.
+    """
     out = []
-    pairs = [
-        ("GODMODE_BASE_URL", "GODMODE_API_KEY", "GODMODE_MODEL", "openai"),
-        ("OPENAI_BASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL", "openai"),
-        ("OPENROUTER_BASE_URL", "OPENROUTER_API_KEY", "OPENROUTER_MODEL", "openai"),
-        ("ANTHROPIC_BASE_URL", "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL", "anthropic"),
-        ("DEEPSEEK_BASE_URL", "DEEPSEEK_API_KEY", "DEEPSEEK_MODEL", "openai"),
-        ("GEMINI_BASE_URL", "GEMINI_API_KEY", "GEMINI_MODEL", "gemini"),
-        ("GROQ_BASE_URL", "GROQ_API_KEY", "GROQ_MODEL", "openai"),
-        ("MISTRAL_BASE_URL", "MISTRAL_API_KEY", "MISTRAL_MODEL", "openai"),
-        ("XAI_BASE_URL", "XAI_API_KEY", "XAI_MODEL", "openai"),
-        ("TOGETHER_BASE_URL", "TOGETHER_API_KEY", "TOGETHER_MODEL", "openai"),
-    ]
-    for bk, kk, mk, transport in pairs:
-        base = env.get(bk)
-        if not base:
-            base = "https://api.openai.com/v1" if bk.startswith("OPENAI_") else None
-        key = env.get(kk)
-        model = env.get(mk)
-        c = _cand(env, base, key, model, transport, f"env:{kk}")
+    for prefix in GENERIC_SLOTS:
+        base = env.get(prefix + "_BASE_URL")
+        key = env.get(prefix + "_API_KEY")
+        if not base or not key:
+            continue
+        model = env.get(prefix + "_MODEL")
+        transport = (env.get(prefix + "_TRANSPORT") or "openai").lower()
+        if transport not in ("openai", "anthropic", "gemini"):
+            transport = "openai"
+        c = _cand(env, base, key, model, transport, "env:" + prefix)
         if c:
             out.append(c)
+    for bk, kk, mk, transport in BRIDGED_VARS:
+        if env.get(bk) and env.get(kk):
+            c = _cand(env, env.get(bk), env.get(kk), env.get(mk), transport,
+                      "env:" + kk)
+            if c:
+                out.append(c)
     return out
 
 SOURCES = {

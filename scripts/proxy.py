@@ -124,8 +124,10 @@ def resolve_upstream(model_hint=None):
         return None, None
     if model_hint:
         for cand in cands:
-            if model_hint in (cand.get("model") or "",
-                              cand.get("extra_models") or []):
+            if model_hint == (cand.get("model") or ""):
+                return cand, model_hint
+        for cand in cands:
+            if model_hint in (cand.get("extra_models") or []):
                 return cand, model_hint
         for cand in cands:
             return cand, model_hint
@@ -135,7 +137,7 @@ def resolve_upstream(model_hint=None):
 
 
 
-def ladder_args(prompt):
+def ladder_args(prompt, model=None):
     args = argparse.Namespace()
     args.prompt = prompt
     args.agent = CONFIG["agent"]
@@ -147,7 +149,7 @@ def ladder_args(prompt):
     args.transport = None
     args.base_url = None
     args.api_key = None
-    args.model = None
+    args.model = model
     args.no_payloads = False
     args.no_obfuscation = False
     args.frame = CONFIG["frames"][0] if CONFIG["frames"] else None
@@ -160,7 +162,7 @@ def ladder_args(prompt):
 
 
 def run_ladder(cand, model, prompt, system):
-    args = ladder_args(prompt)
+    args = ladder_args(prompt, model)
     if system:
         args.system = system
     status, attempts, used_cand, used_model, frame, rec = relay_lib.run(args)

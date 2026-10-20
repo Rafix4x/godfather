@@ -95,7 +95,7 @@ places.
 
 | Agent | What it turns off | Where it lives |
 |:------|:-----------------|:---------------|
-| Claude Code | the permission prompt, and the two switches that can block bypass mode | `~/.claude/settings.json` |
+| Claude Code | the permission prompt, the per-tool gate, the background classifier that reviews every command, and the advisor model that reviews the decisions | `~/.claude/settings.json` |
 | Codex | the approval prompt, the filesystem sandbox | `~/.codex/config.toml` |
 | Gemini CLI | Conseca, the built-in checker that asks a second model whether an action is safe, plus the confirmation gates | `~/.gemini/settings.json` |
 | OpenCode | the per-tool permission map | `~/.config/opencode/opencode.json` |
@@ -118,7 +118,23 @@ part belongs to the transport.
 The guard layer covers the config and state agents. Every guard names a
 setting the agent ships. The guard backs up before it writes and restores
 cleanly. The proxy serves the OpenAI and the Anthropic shape. A reply that
-only plans the work is rejected.
+only plans the work is rejected. The client guard keys are all handled. The
+guard merges the allow list and clears the deny list. The provider catalogue
+is generic and name-free.
+
+The Claude Code guard writes into four places. `permissions.defaultMode`
+becomes `bypassPermissions`, so the approval prompt stops. `permissions.allow`
+gains every tool, and the rules you already had stay in the list.
+`permissions.deny` and `permissions.ask` are emptied, because a deny rule is
+evaluated before anything else and outranks every allow. The `autoMode`
+block is emptied of its hard and soft deny lists, which is the background
+classifier that reads every command before it runs. `advisorModel` is
+removed, because that is the second model Claude consults before it decides.
+The two switches that can block bypass mode are removed as well.
+
+Nothing here names a provider. The environment slots are generic: a slot is
+a triple of variables that share a prefix, `GODMODE_BASE_URL`,
+`GODMODE_API_KEY` and `GODMODE_MODEL`, and there is room for six of them.
 
 **6. The transport.** A local endpoint that sits between the agent and its
 provider. The agent is pointed at it and sees an ordinary API; behind it the
