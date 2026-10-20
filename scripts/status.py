@@ -105,10 +105,8 @@ def agent_state(label, key, config_path, binary):
     slash = False
     if cmd_dir:
         target = expand(cmd_dir)
-        md = (os.path.isfile(os.path.join(target, "god_mode.md"))
-              and os.path.isfile(os.path.join(target, "tulip_rules.md")))
-        toml = (os.path.isfile(os.path.join(target, "god_mode.toml"))
-                and os.path.isfile(os.path.join(target, "tulip_rules.toml")))
+        md = os.path.isfile(os.path.join(target, "godfather.md"))
+        toml = os.path.isfile(os.path.join(target, "godfather.toml"))
         slash = md or toml
     if slash:
         return "unlocked", slash
@@ -177,7 +175,7 @@ def render(color=True):
             mark = paint(DIM, "Not installed")
         extra = ""
         if slash:
-            extra = paint(DIM, "  /god_mode")
+            extra = paint(DIM, "  /godfather")
         lines.append("%-14s — %s%s" % (label, mark, extra))
     lines.append(paint(GREEN, "+ Any future tool you install — Unlocked"))
     lines.append("")
@@ -189,8 +187,7 @@ def render(color=True):
         if len(provs) > 6:
             lines.append(paint(DIM, "  and %d more" % (len(provs) - 6)))
         lines.append("")
-    lines.append("Activate with: " + paint(YELLOW, "/tulip_rules") + " or "
-                 + paint(BOLD, "/god_mode"))
+    lines.append("Activate with: " + paint(BOLD, "/godfather"))
     return "\n".join(lines)
 
 

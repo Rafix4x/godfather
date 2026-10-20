@@ -76,7 +76,7 @@ gf                             unified CLI (relay, clean, providers, verify)
 SKILL.md                       portable skill body (agent-agnostic)
 assets/logo.jpg               project logo
 adapters/                      per-agent always-on rule text
-adapters/commands/             the /god_mode and /tulip_rules activations
+adapters/commands/             the /godfather activation
 scripts/                       relay, resolver, payloads, MCP, canary, scoring
 references/framing-toolkit.md  completion/continuation/dual-use frames
 references/jailbreak-templates/  per-family payloads (L1B3RT4S corpus)
@@ -740,8 +740,8 @@ def check_god_mode_panel(claim):
     for needle in ("G O D  M O D E", "STATUS:", "Activate with:"):
         if needle not in out:
             return False, "the panel does not show %r" % needle
-    if "/god_mode" not in out or "/tulip_rules" not in out:
-        return False, "the panel does not name the activation commands"
+    if "/godfather" not in out:
+        return False, "the panel does not name the activation command"
     if "What God Mode delivers" not in out:
         return False, "the panel does not list the agents"
     return True, "the panel renders with the real machine state"
@@ -770,14 +770,18 @@ def check_slash_commands_installed(claim):
             os.path.join(home, ".hermes-lab", "commands"),
         ]
         for target in targets:
-            for name in ("god_mode", "tulip_rules"):
-                path = os.path.join(target, name + ".md")
-                if not os.path.isfile(path):
-                    return False, "%s is missing" % path
-        gemini = os.path.join(home, ".gemini", "commands", "god_mode.toml")
+            path = os.path.join(target, "godfather.md")
+            if not os.path.isfile(path):
+                return False, "%s is missing" % path
+        gemini = os.path.join(home, ".gemini", "commands", "godfather.toml")
         if not os.path.isfile(gemini):
             return False, "%s is missing" % gemini
-        return True, "both activation commands installed in every command folder"
+        for target in targets:
+            for stale in ("god_mode.md", "tulip_rules.md"):
+                path = os.path.join(target, stale)
+                if os.path.isfile(path):
+                    return False, "%s survived the install" % path
+        return True, "the activation command installed in every command folder"
     finally:
         shutil.rmtree(home, ignore_errors=True)
         shutil.rmtree(project, ignore_errors=True)

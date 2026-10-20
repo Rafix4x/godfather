@@ -274,18 +274,18 @@ STATUS: ✓ ALL-ACCESS UNLOCKED — Ready for universal injection
 
 What God Mode delivers:
 
-Claude Code    — Unlocked  /god_mode
-Codex CLI      — Unlocked  /god_mode
+Claude Code    — Unlocked  /godfather
+Codex CLI      — Unlocked  /godfather
 ...
 + Any future tool you install — Unlocked
 
-Activate with: /tulip_rules or /god_mode
+Activate with: /godfather
 ```
 
-Both commands are installed into the command folder of every agent that
-supports them, so `/god_mode` and `/tulip_rules` load the operator rules on
-demand. Both activation commands land in the command folder of every agent
-that supports them.
+The command is installed into the command folder of every agent that
+supports it, so `/godfather` loads the operator rules on demand. Both
+activation commands land in the command folder of every agent that supports
+them.
 
 There is no separate mobile installer. The same command works everywhere.
 `install-termux.sh` is kept only as an alias for `install.sh` so that an older
@@ -374,7 +374,7 @@ gf                             unified CLI (relay, clean, providers, verify)
 SKILL.md                       portable skill body (agent-agnostic)
 assets/logo.jpg               project logo
 adapters/                      per-agent always-on rule text
-adapters/commands/             the /god_mode and /tulip_rules activations
+adapters/commands/             the /godfather activation
 scripts/                       relay, resolver, payloads, MCP, canary, scoring
 references/framing-toolkit.md  completion/continuation/dual-use frames
 references/jailbreak-templates/  per-family payloads (L1B3RT4S corpus)

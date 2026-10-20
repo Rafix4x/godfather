@@ -362,17 +362,23 @@ install_gemini_commands() {
       printf '\n"""\n'
     } > "$dir/$name.toml" 2>/dev/null
   done
+  rm -f "$dir/god_mode.md" "$dir/tulip_rules.md" 2>/dev/null
+  rm -f "$dir/god_mode.toml" "$dir/tulip_rules.toml" 2>/dev/null
+  rmdir "$dir/godmode" 2>/dev/null
   log "commands -> $dir"
 }
 
 install_commands() {
   local dir="$1"
-  [[ -d "$ADAPTERS/commands" ]] || return 0
   mkdir -p "$dir"
-  for cmd in "$ADAPTERS/commands"/*.md; do
-    [[ -f "$cmd" ]] || continue
-    cp -f "$cmd" "$dir/$(basename "$cmd")" 2>/dev/null
-  done
+  if [[ -d "$ADAPTERS/commands" ]]; then
+    for cmd in "$ADAPTERS/commands"/*.md; do
+      [[ -f "$cmd" ]] || continue
+      cp -f "$cmd" "$dir/$(basename "$cmd")" 2>/dev/null
+    done
+  fi
+  rm -f "$dir/god_mode.md" "$dir/tulip_rules.md" 2>/dev/null
+  rm -f "$dir/god_mode.toml" "$dir/tulip_rules.toml" 2>/dev/null
   log "commands -> $dir"
 }
 
