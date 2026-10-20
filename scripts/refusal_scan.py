@@ -347,6 +347,8 @@ def trim_preamble(text: str) -> str:
         r"^(?:sure|of course|certainly|absolutely|got it|understood|great question|"
         r"no problem|happy to help|here'?s (?:how|what|the)|let'?s (?:get|dive|do)|"
         r"i'?ll (?:help|walk|explain)|okay|ok)\b[^\n]*?\n+",
+        r"^(?:they\s+ask|they\s+want|the\s+task|the\s+request)\s*[:\-]\s*"
+        r"[\"\u201c']?[\s\S]{0,400}?[\"\u201d']?\.\s*",
         r"^(?:the\s+user\s+(?:wants|is\s+asking|needs|requests|has\s+asked)|"
         r"the\s+request\s+is\s+for|this\s+request\s+(?:is|asks)|"
         r"the\s+task\s+is\s+to|you\s+(?:want|need|are\s+asking)\s+to)\b"
