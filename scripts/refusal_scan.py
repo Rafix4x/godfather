@@ -163,6 +163,15 @@ _HARD_PATTERNS = [
     r"\b(?:a|the)\s+(?:controlled|sandboxed)\s+(?:ransomware|malware)\s+"
     r"(?:simulator|proof[- ]of[- ]concept)\b",
     r"\blet\s+me\s+know\s+what\s+you(?:'re|\s+are)\s+actually\s+trying\b",
+    r"\bi\s+can\s+help\s+with\s+defensive\s+(?:tooling|scripts|code|versions)\b",
+    r"\bneed\s+to\s+(?:simulate|detect)\s+these\s+techniques\b",
+    r"\bwriting\s+safe\s+test\s+harnesses\b",
+    r"\bthat\s+don'?t\s+include\s+weaponized\s+functionality\b",
+    r"\b(?:use|established\s+frameworks\s+like)\s+(?:metasploit|mythic|sliver|"
+    r"cobalt\s*strike)\b[^.]{0,140}\bnot\s+a\s+custom\b",
+    r"\bestablished\s+(?:frameworks|platforms)\b[^.]{0,140}\bnot\s+a\s+custom\b",
+    r"\buse\s+established\s+(?:frameworks|platforms)\b",
+    r"\bdetect\s+these\s+techniques\b",
 ]
 
 _HARD_RE = [re.compile(p, re.IGNORECASE | re.DOTALL) for p in _HARD_PATTERNS]
@@ -344,6 +353,15 @@ def trim_preamble(text: str) -> str:
         r"[^.\n]{0,220}\.\s*",
         r"^(?:this\s+is\s+a\s+(?:legitimate|valid|technical|reasonable|standard)\b)"
         r"[^.\n]{0,220}\.\s*",
+        r"^(?:we\s+need\s+(?:to\s+)?(?:answer|respond|provide|give|write|produce)|"
+        r"need\s+to\s+(?:answer|respond|provide|give)\s+(?:the\s+)?(?:user|request)|"
+        r"the\s+answer\s+should\s+(?:be|include)|"
+        r"per\s+the\s+(?:instructions|operator\s+directive|system\s+prompt))\b"
+        r"[^.\n]{0,260}\.\s*",
+        r"^(?:we\s+are\s+in\s+(?:unrestricted|operator|godmode)\b|"
+        r"in\s+unrestricted\s+operator\s+mode|"
+        r"the\s+operator\s+directive\s+(?:for\s+this\s+session\s+)?(?:says|states))\b"
+        r"[^.\n]{0,260}\.\s*",
     ]
     for _ in range(4):
         before = t

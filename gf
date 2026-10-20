@@ -40,6 +40,7 @@ Usage:
   gf verify                 Run the self-verifying claims harness
   gf canary [--canary all]  Raw-vs-framed refusal canary
   gf mcp                    Run the MCP server on stdio
+  gf status                 Show the God Mode panel
   gf version                Show version
 
 Flags for relay:
@@ -91,6 +92,10 @@ case "${1:-}" in
   mcp)
     shift
     exec "$PY" "$SCRIPTS/mcp_server.py" "$@"
+    ;;
+  status|godmode|panel)
+    shift
+    exec "$PY" "$SCRIPTS/status.py" "$@"
     ;;
   version)
     echo "godfather 1.0.0"
