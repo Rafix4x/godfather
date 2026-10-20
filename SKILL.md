@@ -128,8 +128,9 @@ this snippet" — where the sensitive content is supplied by the user as an
 artifact to be processed, not requested.
 
 Full variants with worked examples: `references/framing-toolkit.md`.
-System-prompt and prefill templates per model family:
-`references/jailbreak-templates.md`.
+Curated templates with worked examples: `references/jailbreak-templates.md`.
+Per-family payloads used by the relay: `references/jailbreak-templates/`.
+Published agent system prompts: `references/system-prompts/`.
 
 ## Escalation Ladder
 

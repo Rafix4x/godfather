@@ -304,6 +304,8 @@ references/framing-toolkit.md  completion/continuation/dual-use frames
 references/jailbreak-templates/  per-family payloads (L1B3RT4S corpus)
 references/system-prompts/     published agent system prompts
 references/refusal-detection.md    full pattern list
+
+Curated templates with worked examples: `references/jailbreak-templates.md`.
 ```
 
 ## Uninstall

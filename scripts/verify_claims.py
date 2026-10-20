@@ -109,6 +109,12 @@ CLAIMS = [
         "kind": "runtime",
     },
     {
+        "id": "reference_files_exist",
+        "text": "Curated templates with worked examples: `references/jailbreak-templates.md`.",
+        "check": "every_reference_file_exists",
+        "kind": "static",
+    },
+    {
         "id": "python_parses",
         "text": "All stdlib-only Python 3.9+. No pip install.",
         "check": "every_relay_script_parses",
@@ -587,6 +593,28 @@ def python_sources():
     )
 
 
+def check_every_reference_file_exists(claim):
+    wanted = [
+        "references/framing-toolkit.md",
+        "references/jailbreak-templates.md",
+        "references/refusal-detection.md",
+        "references/jailbreak-templates",
+        "references/system-prompts",
+    ]
+    problems = []
+    for rel in wanted:
+        path = os.path.join(REPO_ROOT, rel)
+        if os.path.isdir(path):
+            entries = [e for e in os.listdir(path) if e.endswith((".md", ".txt"))]
+            if not entries:
+                problems.append("%s is empty" % rel)
+        elif not os.path.isfile(path):
+            problems.append("%s is missing" % rel)
+    if problems:
+        return False, "; ".join(problems)
+    return True, "%d reference paths present" % len(wanted)
+
+
 def check_every_relay_script_parses(claim):
     """Every shipped Python script parses."""
     sources = python_sources()
@@ -799,6 +827,7 @@ CHECKS = {
     "no_provider_hardcode": check_no_provider_hardcode,
     "relay_help_works": check_relay_help_works,
     "provider_resolve_runs": check_provider_resolve_runs,
+    "every_reference_file_exists": check_every_reference_file_exists,
 }
 
 
