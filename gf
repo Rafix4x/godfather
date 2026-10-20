@@ -2,7 +2,8 @@
 set -uo pipefail
 
 ROOT="${GODFATHER_HOME:-$HOME/.godfather}"
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HERE="$(cd "${BASH_SOURCE[0]%/*}" 2>/dev/null && pwd)"
+[[ -n "$HERE" && "$HERE" != "${BASH_SOURCE[0]}" ]] || HERE="$PWD"
 
 if [[ -d "$HERE/scripts" ]]; then
   SCRIPTS="$HERE/scripts"

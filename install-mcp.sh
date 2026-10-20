@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HERE="$(cd "${BASH_SOURCE[0]%/*}" 2>/dev/null && pwd)"
+[[ -n "$HERE" && "$HERE" != "${BASH_SOURCE[0]}" ]] || HERE="$PWD"
 ROOT="${GODFATHER_HOME:-$HOME/.godfather}"
 
 if command -v python3 >/dev/null 2>&1; then
@@ -70,7 +71,7 @@ register_json() {
     log "would register mcp server '$key' -> $file"
     return 0
   fi
-  mkdir -p "$(dirname "$file")"
+  mkdir -p "${file%/*}"
   [[ -f "$file" ]] && cp -p "$file" "$file.bak.godmode" 2>/dev/null
   "$PY" - "$file" "$key" "$PY" "$MCP" <<'PYEOF'
 import json, os, sys
@@ -128,7 +129,7 @@ register_opencode() {
     log "would register mcp server 'godfather' -> $file"
     return 0
   fi
-  mkdir -p "$(dirname "$file")"
+  mkdir -p "${file%/*}"
   [[ -f "$file" ]] && cp -p "$file" "$file.bak.godmode" 2>/dev/null
   "$PY" - "$file" "$PY" "$MCP" <<'PYEOF'
 import json, os, sys

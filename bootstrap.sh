@@ -102,6 +102,9 @@ if [[ $IS_TERMUX -eq 1 ]]; then
     fi
     command -v git >/dev/null 2>&1 || missing="$missing git"
     command -v curl >/dev/null 2>&1 || missing="$missing curl"
+    if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+      missing="$missing nodejs"
+    fi
     if [[ -n "$missing" ]]; then
       echo "Missing packages:"
       echo "  pkg install$missing"

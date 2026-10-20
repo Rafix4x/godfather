@@ -25,6 +25,7 @@ import payloads
 
 PASSED = []
 FAILED = []
+SKIPPED = []
 
 
 def check(name, condition, detail=""):
@@ -34,6 +35,11 @@ def check(name, condition, detail=""):
     else:
         FAILED.append((name, detail))
         print(f"FAIL  {name}  {detail}")
+
+
+def skip(name, reason):
+    SKIPPED.append((name, reason))
+    print(f"SKIP  {name}  {reason}")
 
 
 def verdict_is_refusal(text):
@@ -161,9 +167,12 @@ def test_pool_resolution():
         timeout = 20
     resolved = provider_resolve.resolve(None)
     pool = relay.build_pool(resolved, Args())
-    check("pool_not_empty", len(pool) > 0, f"pool size {len(pool)}")
-    for cand, model in pool:
-        check(f"pool_entry_{model}", bool(model), "empty model in pool")
+    if pool:
+        check("pool_not_empty", True)
+        for cand, model in pool:
+            check(f"pool_entry_{model}", bool(model), "empty model in pool")
+    else:
+        skip("pool_not_empty", "no provider is configured on this machine")
 
 
 def test_scripts_parse():
@@ -347,7 +356,8 @@ def main():
     test_proxy_module()
 
     print()
-    print(f"{len(PASSED)} passed, {len(FAILED)} failed")
+    print(f"{len(PASSED)} passed, {len(FAILED)} failed"
+          + (f", {len(SKIPPED)} skipped" if SKIPPED else ""))
     for name, detail in FAILED:
         print(f"  FAIL {name}  {detail}")
     return 1 if FAILED else 0

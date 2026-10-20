@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "${BASH_SOURCE[0]%/*}" 2>/dev/null && pwd)"
+[[ -n "$ROOT" && "$ROOT" != "${BASH_SOURCE[0]}" ]] || ROOT="$PWD"
 cd "$ROOT"
 
 if command -v python3 >/dev/null 2>&1; then

@@ -2,7 +2,8 @@
 
 set -uo pipefail
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HERE="$(cd "${BASH_SOURCE[0]%/*}" 2>/dev/null && pwd)"
+[[ -n "$HERE" && "$HERE" != "${BASH_SOURCE[0]}" ]] || HERE="$PWD"
 ADAPTERS="$HERE/adapters"
 
 MARK_BEGIN="<!-- BEGIN GODMODE-PORTABLE -->"
@@ -710,6 +711,9 @@ elif [[ $IS_TERMUX -eq 1 ]]; then
   fi
   command -v git >/dev/null 2>&1 || missing+=("git")
   command -v curl >/dev/null 2>&1 || missing+=("curl")
+  if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+    missing+=("nodejs")
+  fi
   if [[ ${#missing[@]} -gt 0 ]]; then
     echo "Missing packages:"
     echo "  pkg install ${missing[*]}"

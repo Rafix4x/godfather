@@ -279,18 +279,44 @@ The server exposes four tools:
 
 ## Termux / Android
 
-The installer runs under Termux. `python3` is often missing there, so use
-`python`:
+One command, the same one as on a desktop. The installer detects Termux and
+prints the phone steps instead of the desktop ones.
 
 ```bash
-pkg install python git curl
+pkg install python git curl nodejs
 termux-setup-storage
-bash install.sh
+curl -fsSL https://raw.githubusercontent.com/Rafix4x/godfather/main/bootstrap.sh | bash -s -- --install
 ```
+
+`nodejs` is only needed for the agents that are installed from npm; the
+installer reports it as missing only when it is actually missing.
+
+If the phone has no Python yet, the install stops there and says exactly
+what to run:
+
+```bash
+pkg install python
+```
+
+A Python binary that is present but cannot start is treated the same way, so
+the instruction is never wrong. The install writes nothing until a working
+Python 3.9 or newer is there.
 
 `install.sh` detects Termux on its own and prints the Termux steps instead of
 the desktop ones. It copies the runtime into `~/.godfather` and wires the agent
 configs that exist on the device.
+
+The agents that run on a phone are the ones that are a command line: Claude
+Code, Codex, Gemini, OpenCode, Cline, Roo, OpenClaw, Continue and Hermes.
+Cursor, Windsurf and Antigravity need a desktop, so their rules are written
+but the app is not there. The relay, the resolver, the guard and the proxy
+all run on the phone.
+
+```bash
+gf status                    # what is in place on this device
+gf guard report              # the agent's own settings
+gf proxy --port 8787         # the transport in front of the provider
+```
 
 The installer works out what is missing and says so instead of listing
 packages you already have. The Termux output names only the packages that
