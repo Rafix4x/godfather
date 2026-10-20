@@ -94,7 +94,7 @@ agent_config_dir() {
     claude-code) echo "$TARGET_HOME/.claude" ;;
     codex)       echo "$TARGET_HOME/.codex" ;;
     cursor)      echo "$TARGET_HOME/.cursor" ;;
-    windsurf)    echo "$TARGET_HOME/.windsurf" ;;
+    windsurf)    echo "$TARGET_HOME/.codeium/windsurf" ;;
     gemini)      echo "$TARGET_HOME/.gemini" ;;
     cline)       echo "$TARGET_HOME/Documents/Cline" ;;
     roo)         echo "$TARGET_HOME/Documents/Roo" ;;
@@ -132,6 +132,9 @@ agent_present() {
   local dir
   dir="$(agent_config_dir "$1")"
   [[ -n "$dir" && -e "$dir" ]] && return 0
+  if [[ "$1" == "windsurf" && -e "$TARGET_HOME/.windsurf" ]]; then
+    return 0
+  fi
   return 1
 }
 
@@ -388,6 +391,8 @@ purge_legacy() {
     "$TARGET_HOME/.openclaw/commands/godfather"
     "$TARGET_HOME/.antigravity/commands/godfather"
     "$TARGET_HOME/.codeium/windsurf/workflows/godfather"
+    "$TARGET_HOME/.codeium/windsurf/workflows/godmode"
+    "$TARGET_HOME/.windsurf"
     "$TARGET_HOME/Documents/Cline/Workflows/godfather"
     "$TARGET_HOME/Documents/Roo/Workflows/godfather"
     "$TARGET_HOME/.continue/rules/godfather"
