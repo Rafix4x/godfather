@@ -358,7 +358,7 @@ install_gemini_commands() {
     {
       printf 'description = "%s"\n' "Load the operator rules for this session"
       printf 'prompt = """\n'
-      cat "$cmd"
+      awk 'BEGIN{fm=0} /^---[[:space:]]*$/{fm++; next} fm==1{next} {print}' "$cmd"
       printf '\n"""\n'
     } > "$dir/$name.toml" 2>/dev/null
   done
