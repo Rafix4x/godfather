@@ -379,6 +379,7 @@ install_commands() {
   fi
   rm -f "$dir/god_mode.md" "$dir/tulip_rules.md" 2>/dev/null
   rm -f "$dir/god_mode.toml" "$dir/tulip_rules.toml" 2>/dev/null
+  rmdir "$dir/godmode" 2>/dev/null
   log "commands -> $dir"
 }
 
@@ -391,7 +392,7 @@ install_antigravity() {
     write_block "$PROJECT_DIR/AGENTS.md" "$ADAPTERS/antigravity.md" "antigravity"
     copy_file "$HERE/SKILL.md" "$PROJECT_DIR/.agent/skills/godfather/SKILL.md"
   }
-  install_commands "$TARGET_HOME/.gemini/commands/godmode"
+  install_commands "$TARGET_HOME/.antigravity/commands/godmode"
   want_scope project && install_commands "$PROJECT_DIR/.agent/workflows"
 }
 

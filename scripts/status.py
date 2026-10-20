@@ -47,6 +47,7 @@ COMMAND_DIRS = {
     "antigravity": "~/.gemini/commands/godmode",
     "minimax": "~/.minimax/commands",
     "hermes-lab": "~/.hermes-lab/commands",
+    "antigravity": "~/.antigravity/commands/godmode",
 }
 
 GREEN = "\033[32m"
