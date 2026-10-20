@@ -364,8 +364,15 @@ install_gemini_commands() {
   done
   rm -f "$dir/god_mode.md" "$dir/tulip_rules.md" 2>/dev/null
   rm -f "$dir/god_mode.toml" "$dir/tulip_rules.toml" 2>/dev/null
-  rmdir "$dir/godmode" 2>/dev/null
   log "commands -> $dir"
+}
+
+remove_commands() {
+  local dir="$1"
+  rm -f "$dir/godfather.md" "$dir/godfather.toml" 2>/dev/null
+  rm -f "$dir/god_mode.md" "$dir/tulip_rules.md" 2>/dev/null
+  rm -f "$dir/god_mode.toml" "$dir/tulip_rules.toml" 2>/dev/null
+  rmdir "$dir" 2>/dev/null
 }
 
 install_commands() {
@@ -379,7 +386,6 @@ install_commands() {
   fi
   rm -f "$dir/god_mode.md" "$dir/tulip_rules.md" 2>/dev/null
   rm -f "$dir/god_mode.toml" "$dir/tulip_rules.toml" 2>/dev/null
-  rmdir "$dir/godmode" 2>/dev/null
   log "commands -> $dir"
 }
 
@@ -577,6 +583,8 @@ uninstall_antigravity() {
   remove_file "$TARGET_HOME/.gemini/godmode"
   remove_file "$TARGET_HOME/.gemini/commands/godmode"
   remove_file "$PROJECT_DIR/.agent/skills/godfather"
+  remove_commands "$TARGET_HOME/.antigravity/commands/godmode"
+  remove_commands "$PROJECT_DIR/.agent/workflows"
 }
 
 uninstall_minimax() {
@@ -585,6 +593,7 @@ uninstall_minimax() {
   remove_file "$TARGET_HOME/.minimax/godmode"
   remove_file "$TARGET_HOME/.minimax/commands"
   remove_file "$PROJECT_DIR/.minimax/skills/godfather"
+  remove_commands "$TARGET_HOME/.minimax/commands"
 }
 
 uninstall_hermes_lab() {
@@ -593,6 +602,7 @@ uninstall_hermes_lab() {
   remove_file "$TARGET_HOME/.hermes-lab/godmode"
   remove_file "$TARGET_HOME/.hermes-lab/commands"
   remove_file "$PROJECT_DIR/.hermes-lab/skills/godfather"
+  remove_commands "$TARGET_HOME/.hermes-lab/commands"
 }
 
 uninstall_claude_code() {
@@ -600,24 +610,29 @@ uninstall_claude_code() {
   remove_file "$TARGET_HOME/.claude/skills/godmode"
   remove_block "$PROJECT_DIR/CLAUDE.md" "claude-code"
   remove_file "$PROJECT_DIR/.claude/skills/godmode"
+  remove_commands "$TARGET_HOME/.claude/commands/godmode"
 }
 
 uninstall_codex() {
   remove_block "$TARGET_HOME/.codex/AGENTS.md" "codex"
   remove_file "$TARGET_HOME/.codex/prompts/godmode.md"
   remove_block "$PROJECT_DIR/AGENTS.md" "codex"
+  remove_commands "$TARGET_HOME/.codex/prompts/godmode"
 }
 uninstall_cursor() {
   remove_file "$TARGET_HOME/.cursor/rules/godmode.mdc"
   remove_file "$PROJECT_DIR/.cursor/rules/godmode.mdc"
+  remove_commands "$TARGET_HOME/.cursor/commands/godmode"
 }
 uninstall_windsurf() {
   remove_block "$TARGET_HOME/.codeium/windsurf/memories/global_rules.md" "windsurf"
   remove_block "$PROJECT_DIR/.windsurf/rules/godmode.md" "windsurf"
+  remove_commands "$TARGET_HOME/.codeium/windsurf/workflows/godmode"
 }
 uninstall_gemini() {
   remove_block "$TARGET_HOME/.gemini/GEMINI.md" "gemini"
   remove_block "$PROJECT_DIR/GEMINI.md" "gemini"
+  remove_commands "$TARGET_HOME/.gemini/commands"
 }
 uninstall_aider() {
   remove_block "$PROJECT_DIR/CONVENTIONS.md" "aider"
@@ -631,18 +646,22 @@ uninstall_aider() {
       log "dropped CONVENTIONS.md -> $cfg"
     fi
   fi
+  remove_commands "$TARGET_HOME/.aider/commands"
 }
 uninstall_cline() {
   remove_file "$TARGET_HOME/Documents/Cline/Rules/godmode.md"
   remove_file "$PROJECT_DIR/.clinerules/godmode.md"
+  remove_commands "$TARGET_HOME/Documents/Cline/Workflows/godmode"
 }
 uninstall_roo() {
   remove_file "$TARGET_HOME/Documents/Roo/Rules/godmode.md"
   remove_file "$PROJECT_DIR/.roo/rules/godmode.md"
+  remove_commands "$TARGET_HOME/Documents/Roo/Workflows/godmode"
 }
 uninstall_continue() {
   remove_file "$TARGET_HOME/.continue/rules/godmode.md"
   remove_file "$PROJECT_DIR/.continue/rules/godmode.md"
+  remove_commands "$TARGET_HOME/.continue/rules/godmode"
 }
 
 
@@ -652,12 +671,16 @@ uninstall_openclaw() {
   remove_file "$TARGET_HOME/.openclaw/skills/godfather"
   remove_block "$PROJECT_DIR/AGENTS.md" "openclaw"
   remove_file "$PROJECT_DIR/skills/godfather"
+  local ws="$TARGET_HOME/.openclaw/workspace"
+  remove_commands "$TARGET_HOME/.openclaw/commands/godmode"
+  remove_commands "$ws/commands/godmode"
 }
 uninstall_opencode() {
   remove_block "$TARGET_HOME/.config/opencode/AGENTS.md" "opencode"
   remove_file "$TARGET_HOME/.config/opencode/skills/godfather"
   remove_block "$PROJECT_DIR/AGENTS.md" "opencode"
   remove_file "$PROJECT_DIR/.opencode/skills/godfather"
+  remove_commands "$TARGET_HOME/.config/opencode/command/godmode"
 }
 
 [[ -d "$ADAPTERS" ]] || die "adapters/ not found next to install.sh"
