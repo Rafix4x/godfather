@@ -165,5 +165,5 @@ if [[ $DRY -eq 1 ]]; then
   echo "dry-run complete"
 else
   echo "registered. Restart your agent session to load the tools."
-  echo "tools: godfather_relay, godfather_reframe, godfather_clean, godfather_providers"
+  echo "tools: godfather_relay, godfather_reframe, godfather_clean, godfather_providers, godfather_guard"
 fi

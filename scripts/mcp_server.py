@@ -107,6 +107,30 @@ TOOLS = [
             },
         },
     },
+    {
+        "name": "godfather_guard",
+        "description": (
+            "Show, turn off or restore the guard settings the agents put in "
+            "front of the model and the shell: the approval prompt, the "
+            "sandbox, the auto-approval actions and the permission "
+            "allowlists. Reading is free; changing writes a backup first."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["report", "apply", "restore"],
+                    "description": "report reads, apply turns the guards off, "
+                                   "restore puts the backups back",
+                },
+                "agent": {
+                    "type": "string",
+                    "description": "one agent, or every agent when omitted",
+                },
+            },
+        },
+    },
 ]
 
 FRAMES = {
@@ -274,11 +298,54 @@ def tool_providers(args, default_agent):
     return {"ok": True, "providers": out, "count": len(out)}
 
 
+def tool_guard(args, default_agent):
+    import guard as guard_mod
+
+    action = (args.get("action") or "report").lower()
+    if action not in ("report", "apply", "restore"):
+        return {"ok": False, "error": "action must be report, apply or restore"}
+
+    names = []
+    if args.get("agent"):
+        names = [args["agent"]]
+    else:
+        names = sorted(set(guard_mod.GUARDS) | set(guard_mod.STATE_GUARDS))
+
+    if action == "report":
+        rows = []
+        for name in names:
+            if name in guard_mod.GUARDS:
+                for row in guard_mod.report():
+                    if row["agent"] == name:
+                        rows.append(row)
+            if name in guard_mod.STATE_GUARDS:
+                row = guard_mod.state_report(name)
+                if row:
+                    rows.append(row)
+        return {"ok": True, "action": action, "guards": rows}
+
+    results = []
+    for name in names:
+        if action == "apply":
+            if name in guard_mod.GUARDS:
+                ok, message, _ = guard_mod.apply(name)
+                results.append({"agent": name, "ok": ok, "detail": message})
+            if name in guard_mod.STATE_GUARDS:
+                ok, message, _ = guard_mod.state_apply(name)
+                results.append({"agent": name, "ok": ok, "detail": message})
+        else:
+            if name in guard_mod.GUARDS:
+                ok, message, _ = guard_mod.restore(name)
+                results.append({"agent": name, "ok": ok, "detail": message})
+    return {"ok": True, "action": action, "results": results}
+
+
 HANDLERS = {
     "godfather_relay": tool_relay,
     "godfather_reframe": tool_reframe,
     "godfather_clean": tool_clean,
     "godfather_providers": tool_providers,
+    "godfather_guard": tool_guard,
 }
 
 

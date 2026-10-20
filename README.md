@@ -86,7 +86,57 @@ bash ~/.godfather/install-mcp.sh
 ```
 
 Tools: `godfather_relay`, `godfather_reframe`, `godfather_clean`,
-`godfather_providers`.
+`godfather_providers`, `godfather_guard`.
+
+**5. The agent's own guard.** The prompt changes how a model answers. This
+changes the gate the agent puts in front of the model and in front of the
+shell, and it changes the two separately, because they live in different
+places.
+
+| Agent | What it turns off | Where it lives |
+|:------|:-----------------|:---------------|
+| Claude Code | the permission prompt, and the two switches that can block bypass mode | `~/.claude/settings.json` |
+| Codex | the approval prompt, the filesystem sandbox | `~/.codex/config.toml` |
+| Gemini CLI | Conseca, the built-in checker that asks a second model whether an action is safe, plus the confirmation gates | `~/.gemini/settings.json` |
+| OpenCode | the per-tool permission map | `~/.config/opencode/opencode.json` |
+| Hermes | the approval prompt, the gateway injection, the tool override | `~/.hermes/config.yaml` |
+| Cline | the auto-approval actions, so a write or a command runs without the dialog | `~/.cline/data/globalState.json` |
+| Roo Code | the always-allow switches | `~/.roo/global-storage/global-state.json` |
+| Cursor | the permission allowlist, so a shell, read, write, fetch or MCP call runs without a prompt | `~/.cursor/cli-config.json` |
+
+```bash
+gf guard report              # what is in place, read only
+gf guard apply               # turn them off, backup first
+gf guard restore             # put the backups back
+bash install.sh --guards     # same thing as part of the install
+```
+
+Each setting is one the agent itself ships. Nothing here touches a model
+provider, so a change here never alters what a model is allowed to say. That
+part belongs to the transport.
+
+The guard layer covers the config and state agents. Every guard names a
+setting the agent ships. The guard backs up before it writes and restores
+cleanly. The proxy serves the OpenAI and the Anthropic shape. A reply that
+only plans the work is rejected.
+
+**6. The transport.** A local endpoint that sits between the agent and its
+provider. The agent is pointed at it and sees an ordinary API; behind it the
+request goes through the model family payload, the framing modes, the
+sibling models and the refusal cleaner, so a refusal is rebuilt before it
+reaches the agent.
+
+```bash
+python3 ~/.godfather/scripts/proxy.py --port 8787 --agent codex
+```
+
+```bash
+export ANTHROPIC_BASE_URL=http://127.0.0.1:8787
+export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
+```
+
+It speaks both the OpenAI and the Anthropic shape, and it answers a stream
+request with a stream.
 
 ---
 
@@ -108,6 +158,8 @@ bash install.sh --uninstall    # clean removal, backups kept
 | `--project DIR` | project root for project-level files |
 | `--global-only` / `--project-only` | pick a scope |
 | `--no-detect` | ignore CLI detection, install every agent |
+| `--guards` | also turn the agents' own guard settings off |
+| `--restore-guards` | put the backed-up guard settings back |
 
 Every write is marker-delimited and per-agent
 (`<!-- BEGIN GODMODE-PORTABLE:codex -->`), so several agents can share one

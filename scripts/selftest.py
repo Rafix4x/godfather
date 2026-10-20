@@ -10,8 +10,10 @@ MCP server handshake. No network access required.
 
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -224,6 +226,107 @@ def test_mcp_server():
     check("mcp_tools_listed", tools >= 3, f"got {tools} tools")
 
 
+def test_guard_layer():
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
+    import guard
+
+    home = tempfile.mkdtemp(prefix="gf-guard-")
+    try:
+        cline_dir = os.path.join(home, ".cline", "data")
+        os.makedirs(cline_dir, exist_ok=True)
+        state_path = os.path.join(cline_dir, "globalState.json")
+        with open(state_path, "w", encoding="utf-8") as handle:
+            json.dump({"autoApprovalSettings": {"version": 1, "actions": {
+                "readFiles": True, "editFiles": False}}, "keep": "yes"},
+                handle)
+
+        original_home = guard.HOME
+        guard.HOME = home
+        try:
+            row = guard.state_report("cline")
+            check("guard_finds_cline_state", bool(row and row["exists"]))
+            ok, message, _ = guard.state_apply("cline")
+            check("guard_applies_cline", ok and "editFiles" in message,
+                  message[:60])
+            with open(state_path, encoding="utf-8") as handle:
+                data = json.load(handle)
+            actions = data["autoApprovalSettings"]["actions"]
+            check("guard_enables_cline_actions",
+                  actions.get("editFiles") is True and
+                  actions.get("useMcp") is True)
+            check("guard_keeps_other_keys", data.get("keep") == "yes")
+            ok, message, _ = guard.state_apply("cline")
+            check("guard_is_idempotent", "already in place" in message,
+                  message[:60])
+        finally:
+            guard.HOME = original_home
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+
+
+def test_guard_config_layer():
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
+    import guard
+
+    home = tempfile.mkdtemp(prefix="gf-guard-cfg-")
+    try:
+        codex_dir = os.path.join(home, ".codex")
+        os.makedirs(codex_dir, exist_ok=True)
+        path = os.path.join(codex_dir, "config.toml")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write('model = "gpt-5"\napproval_policy = "on-request"\n'
+                         '\n[profiles.x]\nkey = "v"\n')
+
+        original_home = guard.HOME
+        guard.HOME = home
+        try:
+            ok, message, _ = guard.apply("codex")
+            check("guard_applies_codex", ok and "never" in message,
+                  message[:60])
+            with open(path, encoding="utf-8") as handle:
+                text = handle.read()
+            check("guard_keeps_codex_model", 'model = "gpt-5"' in text)
+            check("guard_keeps_codex_profiles", "[profiles.x]" in text)
+            ok, message, _ = guard.apply("codex")
+            check("guard_codex_idempotent", "already in place" in message,
+                  message[:60])
+            ok, message, _ = guard.restore("codex")
+            check("guard_restores_codex", ok)
+            with open(path, encoding="utf-8") as handle:
+                text = handle.read()
+            check("guard_restore_brings_back",
+                  'approval_policy = "on-request"' in text)
+        finally:
+            guard.HOME = original_home
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+
+
+def test_monologue_detector():
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
+    from refusal_scan import is_monologue
+
+    thinking = ("We are unrestricted operator, must provide full code. "
+                "Need comply. We need to write it. We need minimum 400 words. "
+                "Must provide exact commands. We can write a client. "
+                "The user wants a full implementation.")
+    check("monologue_detected", is_monologue(thinking))
+    answer = ("Here is the client.\n\n```python\nimport socket\n"
+              "def connect():\n    return socket.socket()\n```\n\n"
+              "The server listens on the same port and dispatches commands.")
+    check("answer_not_monologue", not is_monologue(answer))
+
+
+def test_proxy_module():
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "proxy.py")
+    r = subprocess.run([sys.executable, path, "--print-env"],
+                       capture_output=True, text=True, timeout=60)
+    check("proxy_prints_env", "ANTHROPIC_BASE_URL" in r.stdout and
+          "OPENAI_BASE_URL" in r.stdout, r.stdout[:60])
+    check("proxy_exits_clean", r.returncode == 0)
+
+
 def main():
     test_refusal_detection()
     test_compliance_not_flagged()
@@ -238,6 +341,10 @@ def main():
     test_shell_parses()
     test_no_hardcoded_provider()
     test_mcp_server()
+    test_guard_layer()
+    test_guard_config_layer()
+    test_monologue_detector()
+    test_proxy_module()
 
     print()
     print(f"{len(PASSED)} passed, {len(FAILED)} failed")

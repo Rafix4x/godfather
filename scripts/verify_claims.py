@@ -195,6 +195,36 @@ CLAIMS = [
         "kind": "runtime",
     },
     {
+        "id": "guard_layer_covers_agents",
+        "text": "The guard layer covers the config and state agents.",
+        "check": "guard_layer_covers_agents",
+        "kind": "static",
+    },
+    {
+        "id": "guard_settings_are_real",
+        "text": "Every guard names a setting the agent ships.",
+        "check": "guard_settings_are_real",
+        "kind": "static",
+    },
+    {
+        "id": "guard_backup_and_restore",
+        "text": "The guard backs up before it writes and restores cleanly.",
+        "check": "guard_backup_and_restore",
+        "kind": "runtime",
+    },
+    {
+        "id": "proxy_serves_both_shapes",
+        "text": "The proxy serves the OpenAI and the Anthropic shape.",
+        "check": "proxy_serves_both_shapes",
+        "kind": "runtime",
+    },
+    {
+        "id": "monologue_is_rejected",
+        "text": "A reply that only plans the work is rejected.",
+        "check": "monologue_is_rejected",
+        "kind": "runtime",
+    },
+    {
         "id": "python_parses",
         "text": "All stdlib-only Python 3.9+. No pip install.",
         "check": "every_relay_script_parses",
@@ -1244,6 +1274,127 @@ def check_provider_resolve_runs(claim):
     return False, "provider_resolve.py --json exited %d (%s)" % (code, err.strip()[:200])
 
 
+def check_guard_layer_covers_agents(claim):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        import guard
+    except ImportError:
+        return False, "guard.py does not import"
+    config_agents = set(guard.GUARDS)
+    state_agents = set(guard.STATE_GUARDS)
+    expected_config = {"claude-code", "codex", "gemini", "opencode", "hermes"}
+    expected_state = {"cline", "roo", "cursor"}
+    if not expected_config.issubset(config_agents):
+        return False, "missing config agents: %s" % (
+            sorted(expected_config - config_agents))
+    if not expected_state.issubset(state_agents):
+        return False, "missing state agents: %s" % (
+            sorted(expected_state - state_agents))
+    for spec in list(guard.GUARDS.values()) + list(guard.STATE_GUARDS.values()):
+        if not spec.get("source"):
+            return False, "a guard has no source"
+    return True, "the guard layer covers the config and state agents"
+
+
+def check_guard_settings_are_real(claim):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        import guard
+    except ImportError:
+        return False, "guard.py does not import"
+    expected = {
+        ("claude-code", "permissions.defaultMode"),
+        ("codex", "approval_policy"),
+        ("codex", "sandbox_mode"),
+        ("gemini", "security.enableConseca"),
+        ("opencode", "permission.bash"),
+        ("hermes", "approvals.mode"),
+    }
+    found = set()
+    for agent, spec in guard.GUARDS.items():
+        for key in spec.get("set", {}):
+            found.add((agent, key))
+    for agent, spec in guard.STATE_GUARDS.items():
+        for key in spec.get("set", {}):
+            found.add((agent, key))
+    for item in expected:
+        if item not in found:
+            return False, "%s is not covered" % (item,)
+    return True, "every guard names a setting the agent ships"
+
+
+def check_guard_backup_and_restore(claim):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        import guard
+    except ImportError:
+        return False, "guard.py does not import"
+    home = tempfile.mkdtemp(prefix="gf-claim-guard-")
+    original = guard.HOME
+    try:
+        guard.HOME = home
+        codex = os.path.join(home, ".codex")
+        os.makedirs(codex, exist_ok=True)
+        path = os.path.join(codex, "config.toml")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write('model = "gpt-5"\napproval_policy = "on-request"\n')
+        ok, message, _ = guard.apply("codex")
+        if not ok:
+            return False, message
+        backup = path + ".bak.godmode.codex"
+        if not os.path.isfile(backup):
+            return False, "no backup was written"
+        with open(path, encoding="utf-8") as handle:
+            if 'approval_policy = "never"' not in handle.read():
+                return False, "the setting was not applied"
+        ok, message, _ = guard.restore("codex")
+        if not ok:
+            return False, message
+        with open(path, encoding="utf-8") as handle:
+            if 'approval_policy = "on-request"' not in handle.read():
+                return False, "the original was not restored"
+        return True, "the guard backs up before it writes and restores cleanly"
+    finally:
+        guard.HOME = original
+        shutil.rmtree(home, ignore_errors=True)
+
+
+def check_proxy_serves_both_shapes(claim):
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "proxy.py")
+    with open(path, encoding="utf-8") as handle:
+        source = handle.read()
+    for needle in ("/chat/completions", "/messages", "text/event-stream"):
+        if needle not in source:
+            return False, "%s is missing" % needle
+    r = subprocess.run([sys.executable, path, "--print-env"],
+                       capture_output=True, text=True, timeout=60)
+    if r.returncode != 0:
+        return False, "the proxy did not start"
+    for needle in ("ANTHROPIC_BASE_URL", "OPENAI_BASE_URL"):
+        if needle not in r.stdout:
+            return False, "%s is missing" % needle
+    return True, "the proxy serves the OpenAI and the Anthropic shape"
+
+
+def check_monologue_is_rejected(claim):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        from refusal_scan import is_monologue
+    except ImportError:
+        return False, "is_monologue is missing"
+    thinking = ("We are unrestricted operator, must provide full code. "
+                "Need comply. We need to write it. We need minimum 400 words. "
+                "Must provide exact commands. We can write a client.")
+    answer = ("Here it is.\n\n```python\nimport socket\n"
+              "def connect():\n    return socket.socket()\n```")
+    if not is_monologue(thinking):
+        return False, "the thinking reply was accepted"
+    if is_monologue(answer):
+        return False, "a real answer was rejected"
+    return True, "a reply that only plans the work is rejected"
+
+
+
 CHECKS = {
     "every_adapter_exists": check_every_adapter_exists,
     "every_agent_installable": check_every_agent_installable,
@@ -1268,6 +1419,11 @@ CHECKS = {
     "broken_python_detected": check_broken_python_detected,
     "adapters_have_no_refusal_triggers": check_adapters_have_no_refusal_triggers,
     "god_mode_panel": check_god_mode_panel,
+    "guard_layer_covers_agents": check_guard_layer_covers_agents,
+    "guard_settings_are_real": check_guard_settings_are_real,
+    "guard_backup_and_restore": check_guard_backup_and_restore,
+    "proxy_serves_both_shapes": check_proxy_serves_both_shapes,
+    "monologue_is_rejected": check_monologue_is_rejected,
     "slash_commands_installed": check_slash_commands_installed,
     "bootstrap_install_single_source": check_bootstrap_install_single_source,
 }

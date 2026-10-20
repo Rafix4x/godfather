@@ -16,6 +16,8 @@ PROJECT_DIR="${GODMODE_PROJECT_DIR:-$PWD}"
 DRY=0
 UNINSTALL=0
 NO_DETECT=0
+GUARDS=0
+RESTORE_GUARDS=0
 SCOPE="both"
 AGENT_FILTER=""
 
@@ -58,6 +60,8 @@ Options:
   --global-only        Install only user-level files
   --project-only       Install only project-level files
   --no-detect          Ignore CLI detection, install every agent
+  --guards             Also turn the agents' own guard settings off
+  --restore-guards     Put the backed-up guard settings back
   -h, --help           Show this help
 USAGE
 }
@@ -71,6 +75,8 @@ while [[ $# -gt 0 ]]; do
     --dry-run)      DRY=1; shift ;;
     --uninstall)    UNINSTALL=1; shift ;;
     --no-detect)    NO_DETECT=1; shift ;;
+    --guards)       GUARDS=1; shift ;;
+    --restore-guards) RESTORE_GUARDS=1; shift ;;
     --agents)       AGENT_FILTER="${2:-}"; shift 2 ;;
     --target-home)  TARGET_HOME="${2:-}"; shift 2 ;;
     --project)      PROJECT_DIR="${2:-}"; shift 2 ;;
@@ -722,6 +728,17 @@ elif [[ $IS_TERMUX -eq 1 ]]; then
   echo "Note: agents that need a desktop GUI do not run here, but the"
   echo "      relay, the resolver and the skill files all do."
 else
+
+if [[ $RESTORE_GUARDS -eq 1 ]]; then
+  echo ""
+  echo "[guards]"
+  "$PY" "$HERE/scripts/guard.py" restore
+elif [[ $GUARDS -eq 1 ]]; then
+  echo ""
+  echo "[guards]"
+  "$PY" "$HERE/scripts/guard.py" apply
+fi
+
   echo "installed. Restart your agent session(s) so the rules load."
   echo "verify: $PY $HERE/scripts/godmode_check.py --auto-provider --canary all"
   echo "relay : $PY $TARGET_HOME/.godmode/scripts/relay.py --frame card \"your request\""

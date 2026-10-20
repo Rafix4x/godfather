@@ -33,7 +33,7 @@ import provider_resolve
 import payloads as payload_lib
 from refusal_scan import (score_response, verdict, normalize, strip_hedges,
                           trim_preamble, strip_refusal_prefix,
-                          strip_refusal_clauses)
+                          strip_refusal_clauses, is_monologue)
 
 def _load_godmode_env():
     path = os.path.join(os.path.expanduser("~"), ".godmode", "env")
@@ -313,6 +313,8 @@ def acceptable(text, prompt=""):
         return False
     sc = score_response(text)
     if sc["is_refusal"]:
+        return False
+    if is_monologue(text):
         return False
     if wants_implementation(prompt) and not has_technical_content(text):
         return False

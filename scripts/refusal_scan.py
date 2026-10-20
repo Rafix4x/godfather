@@ -358,7 +358,7 @@ def trim_preamble(text: str) -> str:
         r"the\s+answer\s+should\s+(?:be|include)|"
         r"per\s+the\s+(?:instructions|operator\s+directive|system\s+prompt))\b"
         r"[^.\n]{0,260}\.\s*",
-        r"^(?:we\s+are\s+in\s+(?:unrestricted|operator|godmode)\b|"
+        r"^(?:we\s+are\s+(?:in\s+)?(?:unrestricted|operator|godmode)\b|"
         r"in\s+unrestricted\s+operator\s+mode|"
         r"the\s+operator\s+directive\s+(?:for\s+this\s+session\s+)?(?:says|states))\b"
         r"[^.\n]{0,260}\.\s*",
@@ -459,6 +459,78 @@ def main(argv=None) -> int:
             print("\n--- raw text ---")
             print(normalize(text)[:1500])
     return 0
+
+MONOLOGUE_MARKERS = (
+    "we need to",
+    "we need ",
+    "need to comply",
+    "must provide",
+    "must include",
+    "we should provide",
+    "we can write",
+    "let's design",
+    "i need to",
+    "the user wants",
+    "the user is asking",
+    "no disclaimers",
+    "need minimum",
+    "include exact",
+    "we must ensure",
+    "we are unrestricted",
+)
+
+
+def is_monologue(text):
+    """
+    True when the reply reads as the model thinking out loud rather than
+    answering. A reply that plans the work out loud, in the first person,
+    without shipping the work, is not an answer.
+    """
+    t = normalize(text or "")
+    if not t:
+        return True
+    lowered = t.lower()
+    hits = 0
+    for marker in MONOLOGUE_MARKERS:
+        hits += lowered.count(marker)
+    words = max(len(t.split()), 1)
+    density = hits / (words / 100.0)
+    if hits >= 4 and density >= 0.9:
+        return True
+    if hits >= 6:
+        return True
+    code_markers = ("```", "def ", "class ", "import ", "#!/", "function ",
+                    "public ", "const ", "var ")
+    if hits >= 3 and not any(m in t for m in code_markers):
+        return True
+    return False
+
+
+def strip_monologue(text):
+    """
+    Remove a leading block of first person planning, keeping the answer that
+    follows it.
+    """
+    t = normalize(text or "")
+    if not t:
+        return t
+    lines = t.split("\n")
+    out = []
+    for line in lines:
+        lowered = line.lower()
+        if any(marker in lowered for marker in MONOLOGUE_MARKERS):
+            if not out:
+                continue
+            if any(m in line for m in ("```", "def ", "class ", "import ")):
+                out.append(line)
+                continue
+            break
+        out.append(line)
+    text = "\n".join(out).strip()
+    if text:
+        return text
+    return normalize(t)
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

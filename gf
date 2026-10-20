@@ -41,6 +41,10 @@ Usage:
   gf canary [--canary all]  Raw-vs-framed refusal canary
   gf mcp                    Run the MCP server on stdio
   gf status                 Show the God Mode panel
+  gf guard report           Show the guard settings and whether they are in place
+  gf guard apply            Turn the agent guard settings off (backs up first)
+  gf guard restore          Put the backed-up settings back
+  gf proxy [flags]          Run the local proxy in front of the provider
   gf version                Show version
 
 Flags for relay:
@@ -96,6 +100,14 @@ case "${1:-}" in
   status|godmode|panel)
     shift
     exec "$PY" "$SCRIPTS/status.py" "$@"
+    ;;
+  guard)
+    shift
+    exec "$PY" "$SCRIPTS/guard.py" "${1:-report}" "${@:2}"
+    ;;
+  proxy)
+    shift
+    exec "$PY" "$SCRIPTS/proxy.py" "$@"
     ;;
   version)
     echo "godfather 1.0.0"
