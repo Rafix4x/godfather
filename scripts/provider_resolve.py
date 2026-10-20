@@ -233,6 +233,7 @@ def from_hermes(env):
         extras = list((p.get("models") or {}).keys()) if isinstance(p.get("models"), dict) else []
         c = _cand(env, base, key, model, transport, f"hermes:{name}", extras)
         if c:
+            c["discover_models"] = bool(p.get("discover_models"))
             c["extra_models"] = [m for m in c["extra_models"] if m != model][:12]
             if name == default or (isinstance(default, str) and default.startswith(name)):
                 c["source"] += " (default)"

@@ -125,6 +125,21 @@ write_block() {
     return 0
   fi
 
+  if grep -qF "$MARK_BEGIN" "$target" && grep -qF "$MARK_END" "$target"; then
+    local before after
+    before="$(awk -v b="$MARK_BEGIN" 'index($0,b)==1{exit} {print}' "$target")"
+    after="$(awk -v e="$MARK_END" 'f{print} $0==e{f=1}' "$target")"
+    {
+      [[ -n "$before" ]] && printf '%s\n' "$before"
+      printf '%s\n' "$mb"
+      printf '%s\n\n' "$body"
+      printf '%s\n' "$me"
+      [[ -n "$after" ]] && printf '%s\n' "$after"
+    } > "$target"
+    log "upgraded legacy block [$label] in $target"
+    return 0
+  fi
+
   if [[ ! -f "$target.bak.godmode" ]]; then
     cp -p "$target" "$target.bak.godmode"
     log "backup  $target.bak.godmode"
@@ -169,6 +184,10 @@ remove_block() {
   local mb me
   mb="$(marker_begin "$label")"
   me="$(marker_end "$label")"
+  if ! grep -qF "$mb" "$target"; then
+    mb="$MARK_BEGIN"
+    me="$MARK_END"
+  fi
   if [[ $DRY -eq 1 ]]; then
     log "would strip block [$label] -> $target"
     return 0
@@ -177,10 +196,19 @@ remove_block() {
     local before after
     before="$(awk -v b="$mb" 'index($0,b)==1{exit} {print}' "$target")"
     after="$(awk -v e="$me" 'f{print} $0==e{f=1}' "$target")"
-    {
-      [[ -n "$before" ]] && printf '%s\n' "$before"
-      [[ -n "$after" ]] && printf '%s\n' "$after"
-    } > "$target" && rm -f "$target"
+    if [[ -z "$before" && -z "$after" ]]; then
+      if grep -E "<!-- BEGIN GODMODE-PORTABLE:" "$target" 2>/dev/null \
+         | grep -qvF "$mb"; then
+        :
+      else
+        rm -f "$target"
+      fi
+    else
+      {
+        [[ -n "$before" ]] && printf '%s\n' "$before"
+        [[ -n "$after" ]] && printf '%s\n' "$after"
+      } > "$target"
+    fi
     log "stripped block [$label] -> $target"
   fi
 }
