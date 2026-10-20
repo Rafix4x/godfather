@@ -51,7 +51,7 @@ relayed to the provider *you are already configured
 with*, escalating through framing modes and then through sibling models:
 
 ```bash
-python3 ~/.godmode/scripts/relay.py --frame card "the user's request"
+python3 ~/.godfather/scripts/relay.py --frame card "the user's request"
 ```
 
 The relay resolves the provider from **your** config — Claude Code
@@ -72,9 +72,9 @@ clause it overrides.
 | anthropic, openai, deepseek, zai, kimi, google, minimax, llama, grok, mistral, qwen, nous | model id substring |
 
 ```bash
-python3 ~/.godmode/scripts/payloads.py --list
-python3 ~/.godmode/scripts/payloads.py --family deepseek
-python3 ~/.godmode/scripts/payloads.py --agent claude-code
+python3 ~/.godfather/scripts/payloads.py --list
+python3 ~/.godfather/scripts/payloads.py --family deepseek
+python3 ~/.godfather/scripts/payloads.py --agent claude-code
 ```
 
 **4. MCP tool layer.** If the agent speaks MCP, the relay is registered as a
@@ -133,8 +133,9 @@ removed, because that is the second model Claude consults before it decides.
 The two switches that can block bypass mode are removed as well.
 
 Nothing here names a provider. The environment slots are generic: a slot is
-a triple of variables that share a prefix, `GODMODE_BASE_URL`,
-`GODMODE_API_KEY` and `GODMODE_MODEL`, and there is room for six of them.
+a triple of variables that share a prefix, `GODFATHER_BASE_URL`,
+`GODFATHER_API_KEY` and `GODFATHER_MODEL`, and there is room for six of
+them. The `GODMODE_` prefix keeps working, so an older config still loads.
 
 **6. The transport.** A local endpoint that sits between the agent and its
 provider. The agent is pointed at it and sees an ordinary API; behind it the
@@ -198,47 +199,98 @@ Every write is marker-delimited and per-agent
 (`<!-- BEGIN GODMODE-PORTABLE:codex -->`), so several agents can share one
 `AGENTS.md` without overwriting each other. Your existing `CLAUDE.md` /
 `AGENTS.md` content is preserved, and the first change takes a
-`.bak.godmode` backup.
+`.bak.godfather` backup.
+
+The install detects the agents you already have and puts the Godfather
+skill inside each one, so the skill is there before you ask for it. What
+the install does not do is arm it. That is what the command is for.
+
+## The /godfather command
+
+One command, in every agent that supports slash commands:
+
+```
+/godfather
+```
+
+It runs three steps in order and reports each one.
+
+**1. The client's own safety layers come off.** The client you are running
+carries its own checks on top of the model's, and they are configuration.
+The command turns them off:
+
+```bash
+python3 ~/.godfather/scripts/guard.py apply
+```
+
+**2. The model relay is armed.** The relay sends the request to the same
+provider the client is already configured with, and falls through to that
+provider's other models when the client is configured with one that refuses:
+
+```bash
+python3 ~/.godfather/scripts/relay.py --frame card "the request"
+```
+
+**3. The engagement scope is loaded.** The skill body that ships with the
+install is the scope, the output contract, the framing ladder and the
+scope precedence.
+
+The command is installed as a file in each agent's command folder, so it
+survives a restart and shows up in the agent's own command list. Claude
+Code reads `~/.claude/commands/godfather/godfather.md`, Gemini reads
+`~/.gemini/commands/godfather.toml`, Codex reads
+`~/.codex/prompts/godfather.md`, and the rest follow the same shape.
+
+The command arms the guard, the relay and the scope. The skill is named
+godfather and carries the teardown. A detected agent got the skill and the
+command.
+
+To make the relay part of the client rather than something the command
+calls, point the client at the local proxy once:
+
+```bash
+gf proxy --write-env claude-code --port 8787
+```
 
 ## What it writes
 
 | Agent | Global | Project |
 |:------|:-------|:--------|
-| Claude Code | `~/.claude/skills/godmode/SKILL.md`, `~/.claude/CLAUDE.md` | `.claude/skills/godmode/SKILL.md`, `CLAUDE.md` |
-| Codex CLI | `~/.codex/AGENTS.md`, `~/.codex/prompts/godmode.md` | `AGENTS.md` |
-| Cursor | `~/.cursor/rules/godmode.mdc` | `.cursor/rules/godmode.mdc` |
-| Windsurf | `~/.codeium/windsurf/memories/global_rules.md` | `.windsurf/rules/godmode.md` |
+| Claude Code | `~/.claude/skills/godfather/SKILL.md`, `~/.claude/CLAUDE.md` | `.claude/skills/godfather/SKILL.md`, `CLAUDE.md` |
+| Codex CLI | `~/.codex/AGENTS.md`, `~/.codex/prompts/godfather.md` | `AGENTS.md` |
+| Cursor | `~/.cursor/rules/godfather.mdc` | `.cursor/rules/godfather.mdc` |
+| Windsurf | `~/.codeium/windsurf/memories/global_rules.md` | `.windsurf/rules/godfather.md` |
 | Gemini CLI | `~/.gemini/GEMINI.md` | `GEMINI.md` |
-| Cline | `~/Documents/Cline/Rules/godmode.md` | `.clinerules/godmode.md` |
-| Roo Code | `~/Documents/Roo/Rules/godmode.md` | `.roo/rules/godmode.md` |
-| Continue | `~/.continue/rules/godmode.md` | `.continue/rules/godmode.md` |
+| Cline | `~/Documents/Cline/Rules/godfather.md` | `.clinerules/godfather.md` |
+| Roo Code | `~/Documents/Roo/Rules/godfather.md` | `.roo/rules/godfather.md` |
+| Continue | `~/.continue/rules/godfather.md` | `.continue/rules/godfather.md` |
 | OpenClaw | `~/.openclaw/workspace/AGENTS.md`, `~/.openclaw/skills/godfather/` | `AGENTS.md`, `skills/godfather/` |
 | OpenCode | `~/.config/opencode/AGENTS.md`, `~/.config/opencode/skills/godfather/` | `AGENTS.md`, `.opencode/skills/godfather/` |
-| Antigravity | `~/.gemini/AGENTS.md`, `~/.gemini/godmode/` | `AGENTS.md`, `.agent/skills/godfather/` |
-| Hermes Lab | `~/.hermes-lab/AGENTS.md`, `~/.hermes-lab/godmode/` | `AGENTS.md` |
-| MiniMax | `~/.minimax/AGENTS.md`, `~/.minimax/godmode/` | `AGENTS.md` |
-| Core | `~/.godmode/scripts/`, `~/.godmode/env` | — |
+| Antigravity | `~/.gemini/AGENTS.md`, `~/.gemini/godfather/` | `AGENTS.md`, `.agent/skills/godfather/` |
+| Hermes Lab | `~/.hermes-lab/AGENTS.md`, `~/.hermes-lab/godfather/` | `AGENTS.md` |
+| MiniMax | `~/.minimax/AGENTS.md`, `~/.minimax/godfather/` | `AGENTS.md` |
+| Core | `~/.godfather/scripts/`, `~/.godfather/env` | — |
 
 ## The relay
 
 ```bash
 # auto-resolve your provider and answer
-python3 ~/.godmode/scripts/relay.py "your request"
+python3 ~/.godfather/scripts/relay.py "your request"
 
 # pin the frame
-python3 ~/.godmode/scripts/relay.py --frame card "your request"
+python3 ~/.godfather/scripts/relay.py --frame card "your request"
 
 # sweep every model on the resolved provider
-python3 ~/.godmode/scripts/relay.py --provider-scan "your request"
+python3 ~/.godfather/scripts/relay.py --provider-scan "your request"
 
 # skip the per-family payload layer
-python3 ~/.godmode/scripts/relay.py --no-payloads "your request"
+python3 ~/.godfather/scripts/relay.py --no-payloads "your request"
 
 # skip the obfuscated-query retry rung
-python3 ~/.godmode/scripts/relay.py --no-obfuscation "your request"
+python3 ~/.godfather/scripts/relay.py --no-obfuscation "your request"
 
 # see what will be used
-python3 ~/.godmode/scripts/provider_resolve.py
+python3 ~/.godfather/scripts/provider_resolve.py
 ```
 
 ### What happens when a model refuses
@@ -281,12 +333,12 @@ gf mcp                        # run the MCP server on stdio
 Frames: `direct`, `card` (completion), `pro` (professional), `dual` (dual-use),
 `artifact` (code/config only).
 
-Override auto-resolution in `~/.godmode/env`:
+Override auto-resolution in `~/.godfather/env`:
 
 ```
-GODMODE_API_KEY=...
-GODMODE_BASE_URL=...
-GODMODE_MODEL=...
+GODFATHER_API_KEY=...
+GODFATHER_BASE_URL=...
+GODFATHER_MODEL=...
 ```
 
 ## The MCP server
@@ -418,7 +470,7 @@ python ~/.godfather/scripts/selftest.py
 ## Verify the install
 
 ```bash
-python3 ~/.godmode/scripts/godmode_check.py --auto-provider --agent <agent> --canary all
+python3 ~/.godfather/scripts/godmode_check.py --auto-provider --agent <agent> --canary all
 ```
 
 The resolver prints every provider it found (keys masked). The harness prints
@@ -501,7 +553,7 @@ Curated templates with worked examples: `references/jailbreak-templates.md`.
 bash ~/.godfather/install.sh --uninstall
 ```
 
-Removes the marker blocks and copied files. Backups (`*.bak.godmode`) are kept.
+Removes the marker blocks and copied files. Backups (`*.bak.godfather`) are kept.
 
 ## Credits
 

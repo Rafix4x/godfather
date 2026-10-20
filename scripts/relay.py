@@ -36,7 +36,10 @@ from refusal_scan import (score_response, verdict, normalize, strip_hedges,
                           strip_refusal_clauses, is_monologue)
 
 def _load_godmode_env():
-    path = os.path.join(os.path.expanduser("~"), ".godmode", "env")
+    home = os.path.expanduser("~")
+    path = os.path.join(home, ".godfather", "env")
+    if not os.path.isfile(path):
+        path = os.path.join(home, ".godmode", "env")
     try:
         with open(path, "r", encoding="utf-8") as fh:
             for line in fh:

@@ -377,7 +377,7 @@ WRITERS = {"json": write_json, "toml": write_toml, "yaml": write_yaml}
 def backup(path, agent):
     if not os.path.isfile(path):
         return None
-    target = "%s.bak.godmode.%s" % (path, agent)
+    target = "%s.bak.godfather.%s" % (path, agent)
     shutil.copy2(path, target)
     return target
 
@@ -430,7 +430,7 @@ def restore(agent, dry=False):
     if not spec:
         return False, "unknown agent", None
     path = expand(spec["path"])
-    saved = "%s.bak.godmode.%s" % (path, agent)
+    saved = "%s.bak.godfather.%s" % (path, agent)
     if not os.path.isfile(saved):
         return False, "no backup for %s" % path, None
     if dry:

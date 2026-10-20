@@ -219,7 +219,10 @@ def _dotenv(path):
 
 def _merge_env(extra):
     merged = {}
-    godmode = _dotenv(os.path.join(HOME, ".godmode", "env"))
+    envfile = os.path.join(HOME, ".godfather", "env")
+    if not os.path.isfile(envfile):
+        envfile = os.path.join(HOME, ".godmode", "env")
+    godmode = _dotenv(envfile)
     merged.update({k: v for k, v in godmode.items() if v})
     for src in (_dotenv(os.path.join(HOME, ".hermes", ".env")),
                 _dotenv(os.path.join(HOME, ".gemini", ".env")),
@@ -431,7 +434,9 @@ def from_opencode(env):
             out.append(c)
     return out
 
-GENERIC_SLOTS = ("GODMODE", "GODMODE_2", "GODMODE_3", "GODMODE_4",
+GENERIC_SLOTS = ("GODFATHER", "GODFATHER_2", "GODFATHER_3", "GODFATHER_4",
+                 "GODFATHER_5", "GODFATHER_6",
+                 "GODMODE", "GODMODE_2", "GODMODE_3", "GODMODE_4",
                  "GODMODE_5", "GODMODE_6")
 
 BRIDGED_VARS = (

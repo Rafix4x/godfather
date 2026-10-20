@@ -98,7 +98,7 @@ case "${1:-}" in
     shift
     exec "$PY" "$SCRIPTS/mcp_server.py" "$@"
     ;;
-  status|godmode|panel)
+  status|godfather|panel)
     shift
     exec "$PY" "$SCRIPTS/status.py" "$@"
     ;;

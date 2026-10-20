@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 *.bak.godmode
+*.bak.godfather
 .DS_Store
 .godmode/
 .godfather/

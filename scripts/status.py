@@ -32,20 +32,19 @@ AGENTS = [
 ]
 
 COMMAND_DIRS = {
-    "continue": "~/.continue/rules/godmode",
+    "continue": "~/.continue/rules",
     "gemini": "~/.gemini/commands",
-    "claude-code": "~/.claude/commands/godmode",
-    "codex": "~/.codex/prompts/godmode",
-    "cursor": "~/.cursor/commands/godmode",
-    "windsurf": "~/.codeium/windsurf/workflows/godmode",
-    "cline": "~/Documents/Cline/Workflows/godmode",
-    "roo": "~/Documents/Roo/Workflows/godmode",
-    "opencode": "~/.config/opencode/command/godmode",
-    "openclaw": "~/.openclaw/commands/godmode",
-    "antigravity": "~/.gemini/commands/godmode",
+    "claude-code": "~/.claude/commands",
+    "codex": "~/.codex/prompts",
+    "cursor": "~/.cursor/commands",
+    "windsurf": "~/.codeium/windsurf/workflows",
+    "cline": "~/Documents/Cline/Workflows",
+    "roo": "~/Documents/Roo/Workflows",
+    "opencode": "~/.config/opencode/command",
+    "openclaw": "~/.openclaw/commands",
+    "antigravity": "~/.antigravity/commands",
     "minimax": "~/.minimax/commands",
     "hermes-lab": "~/.hermes-lab/commands",
-    "antigravity": "~/.antigravity/commands/godmode",
 }
 
 GREEN = "\033[32m"
@@ -82,7 +81,7 @@ def marker_present(path):
             if not os.path.isdir(root):
                 continue
             for name in ("CLAUDE.md", "AGENTS.md", "GEMINI.md",
-                         "global_rules.md", "godmode.mdc", "godmode.md"):
+                         "global_rules.md", "godfather.mdc", "godfather.md"):
                 candidate = os.path.join(root, name)
                 if not os.path.isfile(candidate):
                     continue

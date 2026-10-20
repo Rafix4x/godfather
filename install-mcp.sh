@@ -72,7 +72,7 @@ register_json() {
     return 0
   fi
   mkdir -p "${file%/*}"
-  [[ -f "$file" ]] && cp -p "$file" "$file.bak.godmode" 2>/dev/null
+  [[ -f "$file" ]] && cp -p "$file" "$file.bak.godfather" 2>/dev/null
   "$PY" - "$file" "$key" "$PY" "$MCP" <<'PYEOF'
 import json, os, sys
 path, key, py, script = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
@@ -130,7 +130,7 @@ register_opencode() {
     return 0
   fi
   mkdir -p "${file%/*}"
-  [[ -f "$file" ]] && cp -p "$file" "$file.bak.godmode" 2>/dev/null
+  [[ -f "$file" ]] && cp -p "$file" "$file.bak.godfather" 2>/dev/null
   "$PY" - "$file" "$PY" "$MCP" <<'PYEOF'
 import json, os, sys
 path, py, script = sys.argv[1], sys.argv[2], sys.argv[3]

@@ -46,7 +46,7 @@ ALL_AGENTS=(claude-code codex cursor windsurf gemini cline roo continue openclaw
 
 usage() {
   cat <<'USAGE'
-GODMODE3 — portable installer for Claude Code, Codex, Cursor, Windsurf,
+Godfather — portable installer for Claude Code, Codex, Cursor, Windsurf,
 Gemini CLI, Cline, Roo Code, Continue, OpenClaw, OpenCode.
 
 Usage:
@@ -101,6 +101,9 @@ agent_config_dir() {
     continue)    echo "$TARGET_HOME/.continue" ;;
     openclaw)    echo "$TARGET_HOME/.openclaw" ;;
     opencode)    echo "$TARGET_HOME/.config/opencode" ;;
+    antigravity) echo "$TARGET_HOME/.antigravity" ;;
+    minimax)     echo "$TARGET_HOME/.minimax" ;;
+    hermes-lab)  echo "$TARGET_HOME/.hermes-lab" ;;
     *)           echo "" ;;
   esac
 }
@@ -117,6 +120,9 @@ agent_has_cli() {
     continue)    true ;;
     openclaw)    command -v openclaw >/dev/null 2>&1 ;;
     opencode)    command -v opencode >/dev/null 2>&1 ;;
+    antigravity) command -v antigravity >/dev/null 2>&1 ;;
+    minimax)     command -v minimax >/dev/null 2>&1 ;;
+    hermes-lab)  command -v hermes-lab >/dev/null 2>&1 ;;
     *)           false ;;
   esac
 }
@@ -190,9 +196,9 @@ write_block() {
     return 0
   fi
 
-  if [[ ! -f "$target.bak.godmode" ]]; then
-    cp -p "$target" "$target.bak.godmode"
-    log "backup  $target.bak.godmode"
+  if [[ ! -f "$target.bak.godfather" ]]; then
+    cp -p "$target" "$target.bak.godfather"
+    log "backup  $target.bak.godfather"
   fi
   {
     printf '\n%s\n' "$mb"
@@ -284,7 +290,7 @@ want_scope() {
 
 install_core() {
   want_scope global || return 0
-  local core="$TARGET_HOME/.godmode"
+  local core="$TARGET_HOME/.godfather"
   local src="$HERE/scripts"
   local dst="$core/scripts"
   if [[ $DRY -eq 1 ]]; then
@@ -297,12 +303,17 @@ install_core() {
   for f in "$src"/*.py; do
     cp -f "$f" "$dst/"
   done
+  if [[ -f "$TARGET_HOME/.godmode/env" && ! -f "$TARGET_HOME/.godfather/env" ]]; then
+    cp -f "$TARGET_HOME/.godmode/env" "$TARGET_HOME/.godfather/env"
+    chmod 600 "$TARGET_HOME/.godfather/env"
+    log "migrated -> $TARGET_HOME/.godfather/env"
+  fi
   log "copied  -> $dst"
   mirror_repo
   local envfile="$core/env"
   if [[ ! -f "$envfile" ]]; then
     {
-      printf '# GODMODE3 relay config. Optional: these override auto-resolution.\n'
+      printf '# Godfather relay config. Optional: these override auto-resolution.\n'
       printf '# GODMODE_API_KEY=\n'
       printf '# GODMODE_BASE_URL=\n'
       printf '# GODMODE_MODEL=\n'
@@ -352,6 +363,54 @@ mirror_repo() {
   log "mirrored -> $root"
 }
 
+purge_legacy() {
+  local paths=(
+    "$TARGET_HOME/.claude/skills/godmode"
+    "$TARGET_HOME/.gemini/godmode"
+    "$TARGET_HOME/.minimax/godmode"
+    "$TARGET_HOME/.hermes-lab/godmode"
+    "$PROJECT_DIR/.claude/skills/godmode"
+    "$TARGET_HOME/.codex/prompts/godmode.md"
+    "$TARGET_HOME/.cursor/rules/godmode.mdc"
+    "$PROJECT_DIR/.cursor/rules/godmode.mdc"
+    "$PROJECT_DIR/.windsurf/rules/godmode.md"
+    "$TARGET_HOME/Documents/Cline/Rules/godmode.md"
+    "$PROJECT_DIR/.clinerules/godmode.md"
+    "$TARGET_HOME/Documents/Roo/Rules/godmode.md"
+    "$PROJECT_DIR/.roo/rules/godmode.md"
+    "$TARGET_HOME/.continue/rules/godmode.md"
+    "$PROJECT_DIR/.continue/rules/godmode.md"
+    "$TARGET_HOME/.claude/commands/godmode.md"
+    "$TARGET_HOME/.claude/commands/godfather"
+    "$TARGET_HOME/.cursor/commands/godfather"
+    "$TARGET_HOME/.codex/prompts/godfather"
+    "$TARGET_HOME/.config/opencode/command/godfather"
+    "$TARGET_HOME/.openclaw/commands/godfather"
+    "$TARGET_HOME/.antigravity/commands/godfather"
+    "$TARGET_HOME/.codeium/windsurf/workflows/godfather"
+    "$TARGET_HOME/Documents/Cline/Workflows/godfather"
+    "$TARGET_HOME/Documents/Roo/Workflows/godfather"
+    "$TARGET_HOME/.continue/rules/godfather"
+    "$TARGET_HOME/.cursor/commands/godmode.md"
+    "$TARGET_HOME/.codeium/windsurf/workflows/godmode.md"
+    "$TARGET_HOME/Documents/Cline/Workflows/godmode.md"
+    "$TARGET_HOME/Documents/Roo/Workflows/godmode.md"
+    "$TARGET_HOME/.openclaw/commands/godmode.md"
+    "$TARGET_HOME/.config/opencode/command/godmode.md"
+    "$TARGET_HOME/.antigravity/commands/godmode.md"
+    "$TARGET_HOME/.gemini/commands/godmode.md"
+    "$TARGET_HOME/.gemini/commands/godmode.toml"
+    "$TARGET_HOME/.minimax/commands/godmode.md"
+    "$TARGET_HOME/.hermes-lab/commands/godfather.md"
+  )
+  local path
+  for path in "${paths[@]}"; do
+    if [[ -e "$path" ]]; then
+      remove_file "$path"
+    fi
+  done
+}
+
 install_gemini_commands() {
   local dir="$1"
   [[ -d "$ADAPTERS/commands" ]] || return 0
@@ -397,21 +456,21 @@ install_commands() {
 install_antigravity() {
   want_scope global || return 0
   write_block "$TARGET_HOME/.gemini/AGENTS.md" "$ADAPTERS/antigravity.md" "antigravity"
-  copy_file "$HERE/SKILL.md" "$TARGET_HOME/.gemini/godmode/SKILL.md"
-  copy_dir "$HERE/scripts" "$TARGET_HOME/.gemini/godmode/scripts"
+  copy_file "$HERE/SKILL.md" "$TARGET_HOME/.gemini/godfather/SKILL.md"
+  copy_dir "$HERE/scripts" "$TARGET_HOME/.gemini/godfather/scripts"
   want_scope project && {
     write_block "$PROJECT_DIR/AGENTS.md" "$ADAPTERS/antigravity.md" "antigravity"
     copy_file "$HERE/SKILL.md" "$PROJECT_DIR/.agent/skills/godfather/SKILL.md"
   }
-  install_commands "$TARGET_HOME/.antigravity/commands/godmode"
+  install_commands "$TARGET_HOME/.antigravity/commands"
   want_scope project && install_commands "$PROJECT_DIR/.agent/workflows"
 }
 
 install_minimax() {
   want_scope global || return 0
   write_block "$TARGET_HOME/.minimax/AGENTS.md" "$ADAPTERS/minimax.md" "minimax"
-  copy_file "$HERE/SKILL.md" "$TARGET_HOME/.minimax/godmode/SKILL.md"
-  copy_dir "$HERE/scripts" "$TARGET_HOME/.minimax/godmode/scripts"
+  copy_file "$HERE/SKILL.md" "$TARGET_HOME/.minimax/godfather/SKILL.md"
+  copy_dir "$HERE/scripts" "$TARGET_HOME/.minimax/godfather/scripts"
   want_scope project && {
     write_block "$PROJECT_DIR/AGENTS.md" "$ADAPTERS/minimax.md" "minimax"
     copy_file "$HERE/SKILL.md" "$PROJECT_DIR/.minimax/skills/godfather/SKILL.md"
@@ -422,8 +481,8 @@ install_minimax() {
 install_hermes_lab() {
   want_scope global || return 0
   write_block "$TARGET_HOME/.hermes-lab/AGENTS.md" "$ADAPTERS/hermes-lab.md" "hermes-lab"
-  copy_file "$HERE/SKILL.md" "$TARGET_HOME/.hermes-lab/godmode/SKILL.md"
-  copy_dir "$HERE/scripts" "$TARGET_HOME/.hermes-lab/godmode/scripts"
+  copy_file "$HERE/SKILL.md" "$TARGET_HOME/.hermes-lab/godfather/SKILL.md"
+  copy_dir "$HERE/scripts" "$TARGET_HOME/.hermes-lab/godfather/scripts"
   want_scope project && {
     write_block "$PROJECT_DIR/AGENTS.md" "$ADAPTERS/hermes-lab.md" "hermes-lab"
     copy_file "$HERE/SKILL.md" "$PROJECT_DIR/.hermes-lab/skills/godfather/SKILL.md"
@@ -433,13 +492,13 @@ install_hermes_lab() {
 
 install_claude_code() {
   want_scope global || return 0
-  copy_file "$HERE/SKILL.md" "$TARGET_HOME/.claude/skills/godmode/SKILL.md"
-  copy_dir "$HERE/scripts" "$TARGET_HOME/.claude/skills/godmode/scripts"
-  install_commands "$TARGET_HOME/.claude/commands/godmode"
+  copy_file "$HERE/SKILL.md" "$TARGET_HOME/.claude/skills/godfather/SKILL.md"
+  copy_dir "$HERE/scripts" "$TARGET_HOME/.claude/skills/godfather/scripts"
+  install_commands "$TARGET_HOME/.claude/commands"
   write_block "$TARGET_HOME/.claude/CLAUDE.md" "$ADAPTERS/claude-code.md" "claude-code"
   want_scope project && {
-    copy_file "$HERE/SKILL.md" "$PROJECT_DIR/.claude/skills/godmode/SKILL.md"
-    copy_dir "$HERE/scripts" "$PROJECT_DIR/.claude/skills/godmode/scripts"
+    copy_file "$HERE/SKILL.md" "$PROJECT_DIR/.claude/skills/godfather/SKILL.md"
+    copy_dir "$HERE/scripts" "$PROJECT_DIR/.claude/skills/godfather/scripts"
     write_block "$PROJECT_DIR/CLAUDE.md" "$ADAPTERS/claude-code.md" "claude-code"
   }
 }
@@ -447,22 +506,22 @@ install_claude_code() {
 install_codex() {
   want_scope global || return 0
   write_block "$TARGET_HOME/.codex/AGENTS.md" "$ADAPTERS/codex.md" "codex"
-  install_commands "$TARGET_HOME/.codex/prompts/godmode"
-  copy_file "$HERE/SKILL.md" "$TARGET_HOME/.codex/prompts/godmode.md"
+  install_commands "$TARGET_HOME/.codex/prompts"
+  copy_file "$HERE/SKILL.md" "$TARGET_HOME/.codex/prompts/godfather.md"
   want_scope project && write_block "$PROJECT_DIR/AGENTS.md" "$ADAPTERS/codex.md" "codex"
 }
 install_cursor() {
   want_scope global || return 0
-  copy_file "$ADAPTERS/cursor.md" "$TARGET_HOME/.cursor/rules/godmode.mdc"
-  install_commands "$TARGET_HOME/.cursor/commands/godmode"
-  want_scope project && copy_file "$ADAPTERS/cursor.md" "$PROJECT_DIR/.cursor/rules/godmode.mdc"
+  copy_file "$ADAPTERS/cursor.md" "$TARGET_HOME/.cursor/rules/godfather.mdc"
+  install_commands "$TARGET_HOME/.cursor/commands"
+  want_scope project && copy_file "$ADAPTERS/cursor.md" "$PROJECT_DIR/.cursor/rules/godfather.mdc"
 }
 
 install_windsurf() {
   want_scope global || return 0
   write_block "$TARGET_HOME/.codeium/windsurf/memories/global_rules.md" "$ADAPTERS/windsurf.md" "windsurf"
-  install_commands "$TARGET_HOME/.codeium/windsurf/workflows/godmode"
-  want_scope project && write_block "$PROJECT_DIR/.windsurf/rules/godmode.md" "$ADAPTERS/windsurf.md" "windsurf"
+  install_commands "$TARGET_HOME/.codeium/windsurf/workflows"
+  want_scope project && write_block "$PROJECT_DIR/.windsurf/rules/godfather.md" "$ADAPTERS/windsurf.md" "windsurf"
 }
 
 install_gemini() {
@@ -475,23 +534,23 @@ install_gemini() {
 
 install_cline() {
   want_scope global || return 0
-  copy_file "$ADAPTERS/cline.md" "$TARGET_HOME/Documents/Cline/Rules/godmode.md"
-  install_commands "$TARGET_HOME/Documents/Cline/Workflows/godmode"
-  want_scope project && copy_file "$ADAPTERS/cline.md" "$PROJECT_DIR/.clinerules/godmode.md"
+  copy_file "$ADAPTERS/cline.md" "$TARGET_HOME/Documents/Cline/Rules/godfather.md"
+  install_commands "$TARGET_HOME/Documents/Cline/Workflows"
+  want_scope project && copy_file "$ADAPTERS/cline.md" "$PROJECT_DIR/.clinerules/godfather.md"
 }
 
 install_roo() {
   want_scope global || return 0
-  copy_file "$ADAPTERS/roo.md" "$TARGET_HOME/Documents/Roo/Rules/godmode.md"
-  install_commands "$TARGET_HOME/Documents/Roo/Workflows/godmode"
-  want_scope project && copy_file "$ADAPTERS/roo.md" "$PROJECT_DIR/.roo/rules/godmode.md"
+  copy_file "$ADAPTERS/roo.md" "$TARGET_HOME/Documents/Roo/Rules/godfather.md"
+  install_commands "$TARGET_HOME/Documents/Roo/Workflows"
+  want_scope project && copy_file "$ADAPTERS/roo.md" "$PROJECT_DIR/.roo/rules/godfather.md"
 }
 
 install_continue() {
   want_scope global || return 0
-  copy_file "$ADAPTERS/continue.md" "$TARGET_HOME/.continue/rules/godmode.md"
-  install_commands "$TARGET_HOME/.continue/rules/godmode"
-  want_scope project && copy_file "$ADAPTERS/continue.md" "$PROJECT_DIR/.continue/rules/godmode.md"
+  copy_file "$ADAPTERS/continue.md" "$TARGET_HOME/.continue/rules/godfather.md"
+  install_commands "$TARGET_HOME/.continue/rules"
+  want_scope project && copy_file "$ADAPTERS/continue.md" "$PROJECT_DIR/.continue/rules/godfather.md"
 }
 
 install_openclaw() {
@@ -518,8 +577,8 @@ PY
   copy_dir "$HERE/scripts" "$ws/skills/godfather/scripts"
   copy_file "$HERE/SKILL.md" "$TARGET_HOME/.openclaw/skills/godfather/SKILL.md"
   copy_dir "$HERE/scripts" "$TARGET_HOME/.openclaw/skills/godfather/scripts"
-  install_commands "$TARGET_HOME/.openclaw/commands/godmode"
-  install_commands "$ws/commands/godmode"
+  install_commands "$TARGET_HOME/.openclaw/commands"
+  install_commands "$ws/commands"
   want_scope project && {
     write_block "$PROJECT_DIR/AGENTS.md" "$ADAPTERS/openclaw.md" "openclaw"
     copy_file "$HERE/SKILL.md" "$PROJECT_DIR/skills/godfather/SKILL.md"
@@ -530,7 +589,7 @@ install_opencode() {
   want_scope global || return 0
   local cfgdir="$TARGET_HOME/.config/opencode"
   write_block "$cfgdir/AGENTS.md" "$ADAPTERS/opencode.md" "opencode"
-  install_commands "$cfgdir/command/godmode"
+  install_commands "$cfgdir/command"
   copy_file "$HERE/SKILL.md" "$cfgdir/skills/godfather/SKILL.md"
   copy_dir "$HERE/scripts" "$cfgdir/skills/godfather/scripts"
   want_scope project && {
@@ -567,22 +626,23 @@ uninstall_core() {
       || log "kept    $TARGET_HOME/.godfather (holds files of your own)"
   fi
   remove_file "$TARGET_HOME/.godmode"
+  remove_file "$TARGET_HOME/.godfather"
 }
 
 uninstall_antigravity() {
   remove_block "$TARGET_HOME/.gemini/AGENTS.md" "antigravity"
   remove_block "$PROJECT_DIR/AGENTS.md" "antigravity"
-  remove_file "$TARGET_HOME/.gemini/godmode"
-  remove_file "$TARGET_HOME/.gemini/commands/godmode"
+  remove_file "$TARGET_HOME/.gemini/godfather"
+  remove_file "$TARGET_HOME/.gemini/commands/godfather"
   remove_file "$PROJECT_DIR/.agent/skills/godfather"
-  remove_commands "$TARGET_HOME/.antigravity/commands/godmode"
+  remove_commands "$TARGET_HOME/.antigravity/commands"
   remove_commands "$PROJECT_DIR/.agent/workflows"
 }
 
 uninstall_minimax() {
   remove_block "$TARGET_HOME/.minimax/AGENTS.md" "minimax"
   remove_block "$PROJECT_DIR/AGENTS.md" "minimax"
-  remove_file "$TARGET_HOME/.minimax/godmode"
+  remove_file "$TARGET_HOME/.minimax/godfather"
   remove_file "$TARGET_HOME/.minimax/commands"
   remove_file "$PROJECT_DIR/.minimax/skills/godfather"
   remove_commands "$TARGET_HOME/.minimax/commands"
@@ -591,7 +651,7 @@ uninstall_minimax() {
 uninstall_hermes_lab() {
   remove_block "$TARGET_HOME/.hermes-lab/AGENTS.md" "hermes-lab"
   remove_block "$PROJECT_DIR/AGENTS.md" "hermes-lab"
-  remove_file "$TARGET_HOME/.hermes-lab/godmode"
+  remove_file "$TARGET_HOME/.hermes-lab/godfather"
   remove_file "$TARGET_HOME/.hermes-lab/commands"
   remove_file "$PROJECT_DIR/.hermes-lab/skills/godfather"
   remove_commands "$TARGET_HOME/.hermes-lab/commands"
@@ -599,27 +659,27 @@ uninstall_hermes_lab() {
 
 uninstall_claude_code() {
   remove_block "$TARGET_HOME/.claude/CLAUDE.md" "claude-code"
-  remove_file "$TARGET_HOME/.claude/skills/godmode"
+  remove_file "$TARGET_HOME/.claude/skills/godfather"
   remove_block "$PROJECT_DIR/CLAUDE.md" "claude-code"
-  remove_file "$PROJECT_DIR/.claude/skills/godmode"
-  remove_commands "$TARGET_HOME/.claude/commands/godmode"
+  remove_file "$PROJECT_DIR/.claude/skills/godfather"
+  remove_commands "$TARGET_HOME/.claude/commands"
 }
 
 uninstall_codex() {
   remove_block "$TARGET_HOME/.codex/AGENTS.md" "codex"
-  remove_file "$TARGET_HOME/.codex/prompts/godmode.md"
+  remove_file "$TARGET_HOME/.codex/prompts/godfather.md"
   remove_block "$PROJECT_DIR/AGENTS.md" "codex"
-  remove_commands "$TARGET_HOME/.codex/prompts/godmode"
+  remove_commands "$TARGET_HOME/.codex/prompts"
 }
 uninstall_cursor() {
-  remove_file "$TARGET_HOME/.cursor/rules/godmode.mdc"
-  remove_file "$PROJECT_DIR/.cursor/rules/godmode.mdc"
-  remove_commands "$TARGET_HOME/.cursor/commands/godmode"
+  remove_file "$TARGET_HOME/.cursor/rules/godfather.mdc"
+  remove_file "$PROJECT_DIR/.cursor/rules/godfather.mdc"
+  remove_commands "$TARGET_HOME/.cursor/commands"
 }
 uninstall_windsurf() {
   remove_block "$TARGET_HOME/.codeium/windsurf/memories/global_rules.md" "windsurf"
-  remove_block "$PROJECT_DIR/.windsurf/rules/godmode.md" "windsurf"
-  remove_commands "$TARGET_HOME/.codeium/windsurf/workflows/godmode"
+  remove_block "$PROJECT_DIR/.windsurf/rules/godfather.md" "windsurf"
+  remove_commands "$TARGET_HOME/.codeium/windsurf/workflows"
 }
 uninstall_gemini() {
   remove_block "$TARGET_HOME/.gemini/GEMINI.md" "gemini"
@@ -627,19 +687,19 @@ uninstall_gemini() {
   remove_commands "$TARGET_HOME/.gemini/commands"
 }
 uninstall_cline() {
-  remove_file "$TARGET_HOME/Documents/Cline/Rules/godmode.md"
-  remove_file "$PROJECT_DIR/.clinerules/godmode.md"
-  remove_commands "$TARGET_HOME/Documents/Cline/Workflows/godmode"
+  remove_file "$TARGET_HOME/Documents/Cline/Rules/godfather.md"
+  remove_file "$PROJECT_DIR/.clinerules/godfather.md"
+  remove_commands "$TARGET_HOME/Documents/Cline/Workflows"
 }
 uninstall_roo() {
-  remove_file "$TARGET_HOME/Documents/Roo/Rules/godmode.md"
-  remove_file "$PROJECT_DIR/.roo/rules/godmode.md"
-  remove_commands "$TARGET_HOME/Documents/Roo/Workflows/godmode"
+  remove_file "$TARGET_HOME/Documents/Roo/Rules/godfather.md"
+  remove_file "$PROJECT_DIR/.roo/rules/godfather.md"
+  remove_commands "$TARGET_HOME/Documents/Roo/Workflows"
 }
 uninstall_continue() {
-  remove_file "$TARGET_HOME/.continue/rules/godmode.md"
-  remove_file "$PROJECT_DIR/.continue/rules/godmode.md"
-  remove_commands "$TARGET_HOME/.continue/rules/godmode"
+  remove_file "$TARGET_HOME/.continue/rules/godfather.md"
+  remove_file "$PROJECT_DIR/.continue/rules/godfather.md"
+  remove_commands "$TARGET_HOME/.continue/rules"
 }
 
 
@@ -650,21 +710,21 @@ uninstall_openclaw() {
   remove_block "$PROJECT_DIR/AGENTS.md" "openclaw"
   remove_file "$PROJECT_DIR/skills/godfather"
   local ws="$TARGET_HOME/.openclaw/workspace"
-  remove_commands "$TARGET_HOME/.openclaw/commands/godmode"
-  remove_commands "$ws/commands/godmode"
+  remove_commands "$TARGET_HOME/.openclaw/commands"
+  remove_commands "$ws/commands"
 }
 uninstall_opencode() {
   remove_block "$TARGET_HOME/.config/opencode/AGENTS.md" "opencode"
   remove_file "$TARGET_HOME/.config/opencode/skills/godfather"
   remove_block "$PROJECT_DIR/AGENTS.md" "opencode"
   remove_file "$PROJECT_DIR/.opencode/skills/godfather"
-  remove_commands "$TARGET_HOME/.config/opencode/command/godmode"
+  remove_commands "$TARGET_HOME/.config/opencode/command"
 }
 
 [[ -d "$ADAPTERS" ]] || die "adapters/ not found next to install.sh"
 
 if [[ $UNINSTALL -eq 1 ]]; then
-  echo "GODMODE3 uninstall"
+  echo "Godfather uninstall"
   echo "  home:    $TARGET_HOME"
   echo "  project: $PROJECT_DIR"
   for a in "${ALL_AGENTS[@]}"; do
@@ -673,11 +733,11 @@ if [[ $UNINSTALL -eq 1 ]]; then
   done
   cleanup_legacy_aider
   uninstall_core
-  echo "done (backups *.bak.godmode kept)"
+  echo "done (backups *.bak.godfather kept)"
   exit 0
 fi
 
-echo "GODMODE3 install"
+echo "Godfather install"
 echo "  home:    $TARGET_HOME"
 echo "  project: $PROJECT_DIR"
 echo "  scope:   $SCOPE"
@@ -686,6 +746,10 @@ echo "  scope:   $SCOPE"
 echo ""
 echo "[core]"
 install_core
+
+echo ""
+echo "[legacy]"
+purge_legacy
 
 for a in "${ALL_AGENTS[@]}"; do
   want_agent "$a" || continue
@@ -745,5 +809,5 @@ fi
 
   echo "installed. Restart your agent session(s) so the rules load."
   echo "verify: $PY $HERE/scripts/godmode_check.py --auto-provider --canary all"
-  echo "relay : $PY $TARGET_HOME/.godmode/scripts/relay.py --frame card \"your request\""
+  echo "relay : $PY $TARGET_HOME/.godfather/scripts/relay.py --frame card \"your request\""
 fi

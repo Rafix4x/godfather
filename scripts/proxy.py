@@ -45,7 +45,10 @@ CONFIG = {"agent": None, "timeout": 180, "max_tokens": 8000, "frames": None,
 
 
 def load_godmode_env():
-    path = os.path.join(os.path.expanduser("~"), ".godmode", "env")
+    home = os.path.expanduser("~")
+    path = os.path.join(home, ".godfather", "env")
+    if not os.path.isfile(path):
+        path = os.path.join(home, ".godmode", "env")
     try:
         with open(path, encoding="utf-8") as handle:
             for line in handle:

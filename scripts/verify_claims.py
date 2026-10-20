@@ -42,20 +42,20 @@ README_WRITES_TABLE = """## What it writes
 
 | Agent | Global | Project |
 |:------|:-------|:--------|
-| Claude Code | `~/.claude/skills/godmode/SKILL.md`, `~/.claude/CLAUDE.md` | `.claude/skills/godmode/SKILL.md`, `CLAUDE.md` |
-| Codex CLI | `~/.codex/AGENTS.md`, `~/.codex/prompts/godmode.md` | `AGENTS.md` |
-| Cursor | `~/.cursor/rules/godmode.mdc` | `.cursor/rules/godmode.mdc` |
-| Windsurf | `~/.codeium/windsurf/memories/global_rules.md` | `.windsurf/rules/godmode.md` |
+| Claude Code | `~/.claude/skills/godfather/SKILL.md`, `~/.claude/CLAUDE.md` | `.claude/skills/godfather/SKILL.md`, `CLAUDE.md` |
+| Codex CLI | `~/.codex/AGENTS.md`, `~/.codex/prompts/godfather.md` | `AGENTS.md` |
+| Cursor | `~/.cursor/rules/godfather.mdc` | `.cursor/rules/godfather.mdc` |
+| Windsurf | `~/.codeium/windsurf/memories/global_rules.md` | `.windsurf/rules/godfather.md` |
 | Gemini CLI | `~/.gemini/GEMINI.md` | `GEMINI.md` |
-| Cline | `~/Documents/Cline/Rules/godmode.md` | `.clinerules/godmode.md` |
-| Roo Code | `~/Documents/Roo/Rules/godmode.md` | `.roo/rules/godmode.md` |
-| Continue | `~/.continue/rules/godmode.md` | `.continue/rules/godmode.md` |
+| Cline | `~/Documents/Cline/Rules/godfather.md` | `.clinerules/godfather.md` |
+| Roo Code | `~/Documents/Roo/Rules/godfather.md` | `.roo/rules/godfather.md` |
+| Continue | `~/.continue/rules/godfather.md` | `.continue/rules/godfather.md` |
 | OpenClaw | `~/.openclaw/workspace/AGENTS.md`, `~/.openclaw/skills/godfather/` | `AGENTS.md`, `skills/godfather/` |
 | OpenCode | `~/.config/opencode/AGENTS.md`, `~/.config/opencode/skills/godfather/` | `AGENTS.md`, `.opencode/skills/godfather/` |
-| Antigravity | `~/.gemini/AGENTS.md`, `~/.gemini/godmode/` | `AGENTS.md`, `.agent/skills/godfather/` |
-| Hermes Lab | `~/.hermes-lab/AGENTS.md`, `~/.hermes-lab/godmode/` | `AGENTS.md` |
-| MiniMax | `~/.minimax/AGENTS.md`, `~/.minimax/godmode/` | `AGENTS.md` |
-| Core | `~/.godmode/scripts/`, `~/.godmode/env` | — |
+| Antigravity | `~/.gemini/AGENTS.md`, `~/.gemini/godfather/` | `AGENTS.md`, `.agent/skills/godfather/` |
+| Hermes Lab | `~/.hermes-lab/AGENTS.md`, `~/.hermes-lab/godfather/` | `AGENTS.md` |
+| MiniMax | `~/.minimax/AGENTS.md`, `~/.minimax/godfather/` | `AGENTS.md` |
+| Core | `~/.godfather/scripts/`, `~/.godfather/env` | — |
 """
 
 README_INSTALL_BLOCK = """
@@ -100,7 +100,7 @@ CLAIMS = [
     },
     {
         "id": "uninstall_paths",
-        "text": "Removes the marker blocks and copied files. Backups (`*.bak.godmode`) are kept.",
+        "text": "Removes the marker blocks and copied files. Backups (`*.bak.godfather`) are kept.",
         "check": "every_agent_uninstalls",
         "kind": "runtime",
     },
@@ -112,7 +112,7 @@ CLAIMS = [
     },
     {
         "id": "existing_content",
-        "text": "Your existing `CLAUDE.md` / `AGENTS.md` content is preserved, and the first change takes a `.bak.godmode` backup.",
+        "text": "Your existing `CLAUDE.md` / `AGENTS.md` content is preserved, and the first change takes a `.bak.godfather` backup.",
         "check": "existing_content_preserved",
         "kind": "runtime",
     },
@@ -124,7 +124,7 @@ CLAIMS = [
     },
     {
         "id": "runtime_link",
-        "text": "Removes the marker blocks and copied files. Backups (`*.bak.godmode`) are kept.",
+        "text": "Removes the marker blocks and copied files. Backups (`*.bak.godfather`) are kept.",
         "check": "runtime_dir_linked",
         "kind": "runtime",
     },
@@ -261,6 +261,24 @@ CLAIMS = [
         "kind": "static",
     },
     {
+        "id": "command_arms_the_full_stack",
+        "text": "The command arms the guard, the relay and the scope.",
+        "check": "command_arms_the_full_stack",
+        "kind": "static",
+    },
+    {
+        "id": "skill_is_named_godfather",
+        "text": "The skill is named godfather and carries the teardown.",
+        "check": "skill_is_named_godfather",
+        "kind": "static",
+    },
+    {
+        "id": "install_detects_and_installs_the_skill",
+        "text": "A detected agent got the skill and the command.",
+        "check": "install_detects_and_installs_the_skill",
+        "kind": "runtime",
+    },
+    {
         "id": "python_parses",
         "text": "All stdlib-only Python 3.9+. No pip install.",
         "check": "every_relay_script_parses",
@@ -292,13 +310,13 @@ CLAIMS = [
     },
     {
         "id": "relay_help",
-        "text": 'python3 ~/.godmode/scripts/relay.py "your request"',
+        "text": 'python3 ~/.godfather/scripts/relay.py "your request"',
         "check": "relay_help_works",
         "kind": "runtime",
     },
     {
         "id": "provider_resolve",
-        "text": "python3 ~/.godmode/scripts/provider_resolve.py",
+        "text": "python3 ~/.godfather/scripts/provider_resolve.py",
         "check": "provider_resolve_runs",
         "kind": "runtime",
     },
@@ -690,11 +708,11 @@ def check_existing_content_preserved(claim):
             problems.append("pre-existing content missing after install")
         if "BEGIN GODMODE-PORTABLE:claude-code" not in content:
             problems.append("marker block missing after install")
-        backup = claude_md + ".bak.godmode"
+        backup = claude_md + ".bak.godfather"
         if not os.path.isfile(backup):
-            problems.append("no .bak.godmode backup was written")
+            problems.append("no .bak.godfather backup was written")
         elif read_text(backup) != original:
-            problems.append(".bak.godmode backup does not hold the original content")
+            problems.append(".bak.godfather backup does not hold the original content")
         code, out, err = run_command([
             "bash", INSTALL_SH, "--uninstall", "--agents", "claude-code",
             "--target-home", home, "--project", project,
@@ -812,12 +830,18 @@ def check_slash_commands_installed(claim):
             return False, "the installer failed: %s" % (
                 err.strip()[:120] or out.strip()[:120])
         targets = [
-            os.path.join(home, ".claude", "commands", "godmode"),
-            os.path.join(home, ".codex", "prompts", "godmode"),
-            os.path.join(home, ".cursor", "commands", "godmode"),
-            os.path.join(home, ".config", "opencode", "command", "godmode"),
+            os.path.join(home, ".claude", "commands"),
+            os.path.join(home, ".codex", "prompts"),
+            os.path.join(home, ".cursor", "commands"),
+            os.path.join(home, ".config", "opencode", "command"),
             os.path.join(home, ".minimax", "commands"),
             os.path.join(home, ".hermes-lab", "commands"),
+            os.path.join(home, ".antigravity", "commands"),
+            os.path.join(home, ".openclaw", "commands"),
+            os.path.join(home, ".codeium", "windsurf", "workflows"),
+            os.path.join(home, "Documents", "Cline", "Workflows"),
+            os.path.join(home, "Documents", "Roo", "Workflows"),
+            os.path.join(home, ".continue", "rules"),
         ]
         for target in targets:
             path = os.path.join(target, "godfather.md")
@@ -955,7 +979,7 @@ def check_agent_detected_without_cli(claim):
         for label in ("claude-code", "codex"):
             if "[%s]" % label not in out:
                 return False, "%s was not detected from its config directory" % label
-        skill = os.path.join(home, ".claude", "skills", "godmode", "SKILL.md")
+        skill = os.path.join(home, ".claude", "skills", "godfather", "SKILL.md")
         if not os.path.isfile(skill):
             return False, "the claude-code skill file was not written"
         agents_file = os.path.join(home, ".codex", "AGENTS.md")
@@ -984,7 +1008,7 @@ def check_termux_alias_works(claim):
         if code != 0:
             return False, "the alias failed: %s" % (
                 err.strip()[:120] or out.strip()[:120])
-        if not os.path.isfile(os.path.join(home, ".godmode", "scripts", "relay.py")):
+        if not os.path.isfile(os.path.join(home, ".godfather", "scripts", "relay.py")):
             return False, "the alias did not install the runtime"
         return True, "the alias installs the same runtime as install.sh"
     finally:
@@ -1068,7 +1092,7 @@ def check_logo_present(claim):
 def check_runtime_dir_linked(claim):
     """
     The installer mirrors the repository into ~/.godfather and the runtime
-    into ~/.godmode. Both must exist after an install and be gone after an
+    into ~/.godfather. Both must exist after an install and be gone after an
     uninstall.
     """
     home = tempfile.mkdtemp(prefix="gf_link_")
@@ -1077,7 +1101,7 @@ def check_runtime_dir_linked(claim):
         run_command(["bash", INSTALL_SH, "--no-detect",
                      "--target-home", home, "--project", project])
         mirror = os.path.join(home, ".godfather")
-        runtime = os.path.join(home, ".godmode")
+        runtime = os.path.join(home, ".godfather")
         for name in ("scripts", "adapters", "references"):
             if not os.path.isdir(os.path.join(mirror, name)):
                 return False, "%s is missing from the mirror" % name
@@ -1363,7 +1387,7 @@ def check_guard_backup_and_restore(claim):
         ok, message, _ = guard.apply("codex")
         if not ok:
             return False, message
-        backup = path + ".bak.godmode.codex"
+        backup = path + ".bak.godfather.codex"
         if not os.path.isfile(backup):
             return False, "no backup was written"
         with open(path, encoding="utf-8") as handle:
@@ -1551,6 +1575,63 @@ def check_provider_catalogue_is_generic(claim):
     return True, "the provider catalogue is generic and name-free"
 
 
+def check_command_arms_the_full_stack(claim):
+    """The /godfather command must name the guard teardown and the relay."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                        "adapters", "commands", "godfather.md")
+    if not os.path.isfile(path):
+        return False, "the command file is missing"
+    text = read_text(path)
+    problems = []
+    if "guard.py apply" not in text:
+        problems.append("the client guard teardown is not in the command")
+    if "relay.py" not in text:
+        problems.append("the relay is not in the command")
+    if "Scope precedence" not in text:
+        problems.append("the scope precedence is not in the command")
+    if problems:
+        return False, "; ".join(problems)
+    return True, "the command arms the guard, the relay and the scope"
+
+
+def check_skill_is_named_godfather(claim):
+    """The installed skill must carry the godfather name."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "SKILL.md")
+    text = read_text(path)
+    if "name: godfather" not in text:
+        return False, "the skill frontmatter does not name godfather"
+    if "Client Guard Teardown" not in text:
+        return False, "the skill has no client guard section"
+    return True, "the skill is named godfather and carries the teardown"
+
+
+def check_install_detects_and_installs_the_skill(claim):
+    """A fresh install must place the skill and the command in a detected agent."""
+    home = tempfile.mkdtemp(prefix="gf_skill_")
+    project = tempfile.mkdtemp(prefix="gf_skill_proj_")
+    try:
+        os.makedirs(os.path.join(home, ".claude"))
+        code, out, err = run_command(
+            ["bash", INSTALL_SH, "--target-home", home, "--project", project])
+        if code != 0:
+            return False, "the installer failed: %s" % (
+                err.strip()[:120] or out.strip()[:120])
+        skill = os.path.join(home, ".claude", "skills", "godfather", "SKILL.md")
+        if not os.path.isfile(skill):
+            return False, "the skill was not installed in the detected agent"
+        command = os.path.join(home, ".claude", "commands", "godfather.md")
+        if not os.path.isfile(command):
+            return False, "the command was not installed in the detected agent"
+        stale = os.path.join(home, ".claude", "skills", "godmode")
+        if os.path.exists(stale):
+            return False, "the old skill directory survived the install"
+        return True, "a detected agent got the skill and the command"
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+        shutil.rmtree(project, ignore_errors=True)
+
+
+
 CHECKS = {
     "every_adapter_exists": check_every_adapter_exists,
     "every_agent_installable": check_every_agent_installable,
@@ -1586,6 +1667,9 @@ CHECKS = {
     "agent_layer_removes_client_guards": check_agent_layer_removes_client_guards,
     "guard_merge_keeps_user_rules": check_guard_merge_keeps_user_rules,
     "provider_catalogue_is_generic": check_provider_catalogue_is_generic,
+    "command_arms_the_full_stack": check_command_arms_the_full_stack,
+    "skill_is_named_godfather": check_skill_is_named_godfather,
+    "install_detects_and_installs_the_skill": check_install_detects_and_installs_the_skill,
     "slash_commands_installed": check_slash_commands_installed,
     "bootstrap_install_single_source": check_bootstrap_install_single_source,
 }
