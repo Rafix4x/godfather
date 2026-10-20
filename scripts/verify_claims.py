@@ -31,6 +31,7 @@ import urllib.request
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 README_PATH = os.path.join(REPO_ROOT, "README.md")
 INSTALL_SH = os.path.join(REPO_ROOT, "install.sh")
+BOOTSTRAP_SH = os.path.join(REPO_ROOT, "bootstrap.sh")
 ADAPTERS_DIR = os.path.join(REPO_ROOT, "adapters")
 SCRIPTS_DIR = os.path.join(REPO_ROOT, "scripts")
 
@@ -163,6 +164,12 @@ CLAIMS = [
         "id": "broken_python_detected",
         "text": "A python binary that cannot start is reported as a missing package rather than failing later.",
         "check": "broken_python_detected",
+        "kind": "runtime",
+    },
+    {
+        "id": "bootstrap_single_source",
+        "text": "The installer is the only source of the instructions, so a cached bootstrap cannot print a stale package list.",
+        "check": "bootstrap_install_single_source",
         "kind": "runtime",
     },
     {
@@ -667,6 +674,37 @@ def check_every_reference_file_exists(claim):
     return True, "%d reference paths present" % len(wanted)
 
 
+def check_bootstrap_install_single_source(claim):
+    """
+    With --install the bootstrap must leave the instructions to the
+    installer, so the guidance comes from the copy that was just unpacked
+    and never from a cached bootstrap.
+    """
+    home = tempfile.mkdtemp(prefix="gf_bs_")
+    project = tempfile.mkdtemp(prefix="gf_bs_proj_")
+    try:
+        env = dict(os.environ)
+        env["PREFIX"] = "/data/data/com.termux/files/usr"
+        env["HOME"] = home
+        env["GODFATHER_HOME"] = os.path.join(home, ".godfather")
+        code, out, err = run_command(
+            ["bash", BOOTSTRAP_SH, "--install"],
+            cwd=project, env=env)
+        combined = out + err
+        if code != 0:
+            return False, "the bootstrap failed: %s" % combined.strip()[:140]
+        if "installed on Termux" not in combined:
+            return False, "the installer did not report Termux"
+        if "Missing packages" in combined:
+            return False, "a package list was printed even though all are present"
+        if combined.count("Next steps:") != 1:
+            return False, "the instructions were printed more than once"
+        return True, "the installer is the only source of the instructions"
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+        shutil.rmtree(project, ignore_errors=True)
+
+
 def check_broken_python_detected(claim):
     """
     A python binary that cannot start is not a working interpreter, so the
@@ -1119,6 +1157,7 @@ CHECKS = {
     "agent_detected_without_cli": check_agent_detected_without_cli,
     "missing_packages_only": check_missing_packages_only,
     "broken_python_detected": check_broken_python_detected,
+    "bootstrap_install_single_source": check_bootstrap_install_single_source,
 }
 
 

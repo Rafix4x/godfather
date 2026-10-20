@@ -92,26 +92,28 @@ if [[ $RUN_INSTALL -eq 1 ]]; then
 fi
 
 if [[ $IS_TERMUX -eq 1 ]]; then
-  echo
-  echo "Termux detected."
-  echo
-  missing=""
-  if [[ -z "$PY" ]]; then
-    missing="$missing python"
-  fi
-  command -v git >/dev/null 2>&1 || missing="$missing git"
-  command -v curl >/dev/null 2>&1 || missing="$missing curl"
-  if [[ -n "$missing" ]]; then
-    echo "Missing packages:"
-    echo "  pkg install$missing"
+  if [[ $RUN_INSTALL -eq 0 ]]; then
+    echo
+    echo "Termux detected."
+    echo
+    missing=""
+    if [[ -z "$PY" ]]; then
+      missing="$missing python"
+    fi
+    command -v git >/dev/null 2>&1 || missing="$missing git"
+    command -v curl >/dev/null 2>&1 || missing="$missing curl"
+    if [[ -n "$missing" ]]; then
+      echo "Missing packages:"
+      echo "  pkg install$missing"
+      echo
+    fi
+    echo "Next:"
+    echo "  bash ~/.godfather/install.sh         # install into the agents on this device"
+    echo
+    echo "  $PY ~/.godfather/scripts/selftest.py"
+    echo "  $PY ~/.godfather/scripts/relay.py \"your request\""
     echo
   fi
-  echo "Next:"
-  echo "  bash ~/.godfather/install.sh         # install into the agents on this device"
-  echo
-  echo "  $PY ~/.godfather/scripts/selftest.py"
-  echo "  $PY ~/.godfather/scripts/relay.py \"your request\""
-  echo
   exit 0
 fi
 

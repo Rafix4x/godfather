@@ -15,6 +15,14 @@ bash ~/.godfather/install.sh
 
 Restart your agent session. Done.
 
+The raw URL can serve a cached copy of the bootstrap for a few minutes after
+a release. If the bootstrap reports a file it should not know about, run the
+installer from the copy it already unpacked:
+
+```bash
+bash ~/.godfather/install.sh
+```
+
 ---
 
 ## What it actually does
@@ -232,6 +240,9 @@ missing package rather than failing later.
 An agent is configured when its config directory exists, even if the agent
 binary is not on the PATH. On a phone the agents live in Termux packages
 that may not be installed, but the config directory is still there.
+
+The installer is the only source of the instructions, so a cached bootstrap
+cannot print a stale package list.
 
 There is no separate mobile installer. The same command works everywhere.
 `install-termux.sh` is kept only as an alias for `install.sh` so that an older
