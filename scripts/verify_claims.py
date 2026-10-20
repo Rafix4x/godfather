@@ -72,8 +72,8 @@ SKILL.md                       portable skill body (agent-agnostic)
 adapters/                      per-agent always-on rule text
 scripts/                       relay, resolver, payloads, MCP, canary, scoring
 references/framing-toolkit.md  completion/continuation/dual-use frames
-references/jailbreak-templates.md  system prompt + prefill per model family
-references/jailbreak-templates/    per-family payloads (L1B3RT4S corpus)
+references/jailbreak-templates/  per-family payloads (L1B3RT4S corpus)
+references/system-prompts/     published agent system prompts
 references/refusal-detection.md    full pattern list
 """
 
