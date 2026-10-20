@@ -69,12 +69,15 @@ install-mcp.sh                 register the MCP server with your agents
 verify.sh                      run the self-verifying claims harness
 gf                             unified CLI (relay, clean, providers, verify)
 SKILL.md                       portable skill body (agent-agnostic)
+assets/logo.jpg               project logo
 adapters/                      per-agent always-on rule text
 scripts/                       relay, resolver, payloads, MCP, canary, scoring
 references/framing-toolkit.md  completion/continuation/dual-use frames
 references/jailbreak-templates/  per-family payloads (L1B3RT4S corpus)
 references/system-prompts/     published agent system prompts
 references/refusal-detection.md    full pattern list
+
+Curated templates with worked examples: `references/jailbreak-templates.md`.
 """
 
 CLAIMS = [
@@ -119,6 +122,12 @@ CLAIMS = [
         "text": "Removes the marker blocks and copied files. Backups (`*.bak.godmode`) are kept.",
         "check": "runtime_dir_linked",
         "kind": "runtime",
+    },
+    {
+        "id": "logo_present",
+        "text": "assets/logo.jpg               project logo",
+        "check": "logo_present",
+        "kind": "static",
     },
     {
         "id": "python_parses",
@@ -621,6 +630,19 @@ def check_every_reference_file_exists(claim):
     return True, "%d reference paths present" % len(wanted)
 
 
+def check_logo_present(claim):
+    path = os.path.join(REPO_ROOT, "assets", "logo.jpg")
+    if not os.path.isfile(path):
+        return False, "assets/logo.jpg is missing"
+    size = os.path.getsize(path)
+    if size < 2000:
+        return False, "assets/logo.jpg is only %d bytes" % size
+    readme = read_text(README_PATH)
+    if "assets/logo.jpg" not in readme:
+        return False, "the README does not reference assets/logo.jpg"
+    return True, "assets/logo.jpg present (%d bytes) and referenced" % size
+
+
 def check_runtime_dir_linked(claim):
     home = tempfile.mkdtemp(prefix="gf_link_")
     project = tempfile.mkdtemp(prefix="gf_link_proj_")
@@ -857,6 +879,7 @@ CHECKS = {
     "provider_resolve_runs": check_provider_resolve_runs,
     "every_reference_file_exists": check_every_reference_file_exists,
     "runtime_dir_linked": check_runtime_dir_linked,
+    "logo_present": check_logo_present,
 }
 
 

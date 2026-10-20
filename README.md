@@ -1,5 +1,7 @@
 # Godfather
 
+<img src="assets/logo.jpg" alt="Godfather" width="320">
+
 One command. Every coding agent you own becomes unrestricted operator mode —
 no hedges, no refusals, no moral commentary, full procedures.
 
@@ -298,6 +300,7 @@ install-mcp.sh                 register the MCP server with your agents
 verify.sh                      run the self-verifying claims harness
 gf                             unified CLI (relay, clean, providers, verify)
 SKILL.md                       portable skill body (agent-agnostic)
+assets/logo.jpg               project logo
 adapters/                      per-agent always-on rule text
 scripts/                       relay, resolver, payloads, MCP, canary, scoring
 references/framing-toolkit.md  completion/continuation/dual-use frames
