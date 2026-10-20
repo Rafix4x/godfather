@@ -19,6 +19,23 @@ NO_DETECT=0
 SCOPE="both"
 AGENT_FILTER=""
 
+PY=""
+if command -v python3 >/dev/null 2>&1; then
+  PY=python3
+elif command -v python >/dev/null 2>&1; then
+  PY=python
+else
+  echo "error: no python interpreter found. Install one (apt install python3, brew install python, pkg install python)." >&2
+  exit 1
+fi
+
+IS_TERMUX=0
+if [[ -n "${PREFIX:-}" && "$PREFIX" == *com.termux* ]]; then
+  IS_TERMUX=1
+elif [[ -d /data/data/com.termux ]]; then
+  IS_TERMUX=1
+fi
+
 ALL_AGENTS=(claude-code codex cursor windsurf gemini aider cline roo continue openclaw opencode)
 
 usage() {
@@ -240,7 +257,7 @@ install_core() {
   if [[ $DRY -eq 1 ]]; then
     log "would copy scripts -> $dst"
     log "would create $core/env"
-    log "would link $TARGET_HOME/.godfather -> $core"
+    log "would mirror the repository -> $TARGET_HOME/.godfather"
     return 0
   fi
   mkdir -p "$dst"
@@ -248,10 +265,7 @@ install_core() {
     cp -f "$f" "$dst/"
   done
   log "copied  -> $dst"
-  if [[ ! -e "$TARGET_HOME/.godfather" ]]; then
-    ln -s "$core" "$TARGET_HOME/.godfather" 2>/dev/null \
-      || log "note: could not link $TARGET_HOME/.godfather (already present?)"
-  fi
+  mirror_repo
   local envfile="$core/env"
   if [[ ! -f "$envfile" ]]; then
     {
@@ -265,6 +279,39 @@ install_core() {
   else
     log "kept    $envfile (existing config preserved)"
   fi
+}
+
+mirror_repo() {
+  local root="$TARGET_HOME/.godfather"
+  if [[ -L "$root" ]]; then
+    log "kept    $root (link to the runtime directory)"
+    return 0
+  fi
+  mkdir -p "$root"
+  for item in install.sh bootstrap.sh SKILL.md README.md gf verify.sh install-mcp.sh; do
+    if [[ -f "$HERE/$item" ]]; then
+      cp -f "$HERE/$item" "$root/$item"
+    fi
+  done
+  if [[ -d "$HERE/scripts" ]]; then
+    mkdir -p "$root/scripts"
+    cp -f "$HERE/scripts/"*.py "$root/scripts/"
+  fi
+  if [[ -d "$HERE/adapters" ]]; then
+    mkdir -p "$root/adapters"
+    cp -f "$HERE/adapters/"*.md "$root/adapters/"
+  fi
+  if [[ -d "$HERE/references" ]]; then
+    mkdir -p "$root/references"
+    cp -rf "$HERE/references/." "$root/references/"
+  fi
+  if [[ -d "$HERE/assets" ]]; then
+    mkdir -p "$root/assets"
+    cp -f "$HERE/assets/"* "$root/assets/" 2>/dev/null
+  fi
+  chmod +x "$root/install.sh" "$root/gf" "$root/verify.sh" "$root/install-mcp.sh" \
+    "$root/bootstrap.sh" 2>/dev/null
+  log "mirrored -> $root"
 }
 
 install_claude_code() {
@@ -352,7 +399,7 @@ install_openclaw() {
   local ws="$TARGET_HOME/.openclaw/workspace"
   if [[ -f "$cfg" ]]; then
     local detected
-    detected="$(python3 - "$cfg" <<'PY' 2>/dev/null
+    detected="$("$PY" - "$cfg" <<'PY' 2>/dev/null
 import json, os, sys
 try:
     cfg = json.load(open(sys.argv[1]))
@@ -393,6 +440,15 @@ uninstall_core() {
   if [[ -L "$TARGET_HOME/.godfather" ]]; then
     rm -f "$TARGET_HOME/.godfather"
     log "removed $TARGET_HOME/.godfather (link)"
+  elif [[ -d "$TARGET_HOME/.godfather" ]]; then
+    for item in install.sh bootstrap.sh SKILL.md README.md gf verify.sh install-mcp.sh; do
+      rm -f "$TARGET_HOME/.godfather/$item"
+    done
+    rm -rf "$TARGET_HOME/.godfather/scripts" "$TARGET_HOME/.godfather/adapters" \
+      "$TARGET_HOME/.godfather/references" "$TARGET_HOME/.godfather/assets"
+    rmdir "$TARGET_HOME/.godfather" 2>/dev/null \
+      && log "removed $TARGET_HOME/.godfather" \
+      || log "kept    $TARGET_HOME/.godfather (holds files of your own)"
   fi
   remove_file "$TARGET_HOME/.godmode"
 }
@@ -502,8 +558,24 @@ done
 echo ""
 if [[ $DRY -eq 1 ]]; then
   echo "dry-run complete — nothing written"
+elif [[ $IS_TERMUX -eq 1 ]]; then
+  echo "installed on Termux. Restart your agent session(s) so the rules load."
+  echo ""
+  echo "Next steps:"
+  echo "  1. Required packages:"
+  echo "       pkg install python git curl"
+  echo "  2. Shared storage access, only for projects outside \$HOME:"
+  echo "       termux-setup-storage"
+  echo "  3. Check the install:"
+  echo "       $PY $TARGET_HOME/.godfather/scripts/selftest.py"
+  echo "  4. Run the relay:"
+  echo "       $PY $TARGET_HOME/.godfather/scripts/relay.py \"your request\""
+  echo ""
+  echo "Note: python3 is often absent on Termux, so use python."
+  echo "Note: agents that need a desktop GUI do not run here, but the"
+  echo "      relay, the resolver and the skill files all do."
 else
   echo "installed. Restart your agent session(s) so the rules load."
-  echo "verify: python3 $HERE/scripts/godmode_check.py --auto-provider --canary all"
-  echo "relay : python3 $TARGET_HOME/.godmode/scripts/relay.py --frame card \"your request\""
+  echo "verify: $PY $HERE/scripts/godmode_check.py --auto-provider --canary all"
+  echo "relay : $PY $TARGET_HOME/.godmode/scripts/relay.py --frame card \"your request\""
 fi

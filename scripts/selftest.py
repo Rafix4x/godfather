@@ -180,7 +180,7 @@ def test_scripts_parse():
 def test_shell_parses():
     root = os.path.dirname(HERE)
     for name in ("install.sh", "bootstrap.sh", "gf", "verify.sh", "install-mcp.sh",
-                 "install-termux.sh"):
+                 "gf"):
         path = os.path.join(root, name)
         if not os.path.exists(path):
             continue

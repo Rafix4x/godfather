@@ -64,7 +64,6 @@ bash install.sh --uninstall    # clean removal, backups kept
 README_LAYOUT_BLOCK = """
 bootstrap.sh                   one-line installer from GitHub
 install.sh                     installer / uninstaller
-install-termux.sh              Termux / Android installer
 install-mcp.sh                 register the MCP server with your agents
 verify.sh                      run the self-verifying claims harness
 gf                             unified CLI (relay, clean, providers, verify)
@@ -128,6 +127,18 @@ CLAIMS = [
         "text": "assets/logo.jpg               project logo",
         "check": "logo_present",
         "kind": "static",
+    },
+    {
+        "id": "resolves_without_optional_deps",
+        "text": "The resolver reads the agent's own provider config, so it works with no third-party packages installed.",
+        "check": "resolves_without_optional_deps",
+        "kind": "runtime",
+    },
+    {
+        "id": "termux_detected",
+        "text": "There is no separate mobile installer. The same command works everywhere.",
+        "check": "termux_detected",
+        "kind": "runtime",
     },
     {
         "id": "python_parses",
@@ -226,7 +237,7 @@ def normalize_ws(text):
     return " ".join(text.split())
 
 
-def run_command(argv, cwd=REPO_ROOT):
+def run_command(argv, cwd=REPO_ROOT, env=None):
     try:
         proc = subprocess.run(
             argv,
@@ -234,6 +245,7 @@ def run_command(argv, cwd=REPO_ROOT):
             capture_output=True,
             text=True,
             timeout=RUN_TIMEOUT,
+            env=env,
         )
     except subprocess.TimeoutExpired:
         return 124, "", "timeout after %ss" % RUN_TIMEOUT
@@ -630,6 +642,65 @@ def check_every_reference_file_exists(claim):
     return True, "%d reference paths present" % len(wanted)
 
 
+def check_termux_detected(claim):
+    """
+    The installer must detect Termux on its own and print the Termux steps,
+    so no separate mobile installer is needed.
+    """
+    home = tempfile.mkdtemp(prefix="gf_termux_")
+    project = tempfile.mkdtemp(prefix="gf_termux_proj_")
+    try:
+        env = dict(os.environ)
+        env["PREFIX"] = "/data/data/com.termux/files/usr"
+        env["HOME"] = home
+        code, out, err = run_command(
+            ["bash", INSTALL_SH, "--no-detect",
+             "--target-home", home, "--project", project],
+            env=env)
+        if code != 0:
+            return False, "the installer failed on Termux: %s" % (
+                err.strip()[:120] or out.strip()[:120])
+        if "installed on Termux" not in out:
+            return False, "the installer did not report Termux"
+        for needle in ("pkg install python", "termux-setup-storage"):
+            if needle not in out:
+                return False, "the Termux steps do not mention %s" % needle
+        return True, "Termux detected and the mobile steps printed"
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+        shutil.rmtree(project, ignore_errors=True)
+
+
+def check_resolves_without_optional_deps(claim):
+    """
+    The resolver must find providers on a machine that has no PyYAML and no
+    TOML package, which is the normal situation on a phone under Termux.
+    """
+    stub_dir = tempfile.mkdtemp(prefix="gf_nodeps_")
+    try:
+        for name in ("yaml", "toml", "tomllib"):
+            with open(os.path.join(stub_dir, name + ".py"), "w") as handle:
+                handle.write("raise ImportError('not installed')\n")
+        env = dict(os.environ)
+        env["PYTHONPATH"] = stub_dir + os.pathsep + env.get("PYTHONPATH", "")
+        code, out, err = run_command(
+            [sys.executable, os.path.join(SCRIPTS_DIR, "provider_resolve.py"),
+             "--json"], env=env)
+        if code not in (0, 1):
+            return False, "provider_resolve.py crashed without yaml/toml: %s" % (
+                out.strip()[:120] or err.strip()[:120])
+        data = json.loads(out)
+        providers = data.get("providers") if isinstance(data, dict) else data
+        if not providers:
+            return False, "no provider resolved without yaml/toml"
+        return True, "%d provider(s) resolved with no yaml/toml installed" % len(
+            providers)
+    except Exception as exc:
+        return False, "resolver check failed: %s" % exc
+    finally:
+        shutil.rmtree(stub_dir, ignore_errors=True)
+
+
 def check_logo_present(claim):
     path = os.path.join(REPO_ROOT, "assets", "logo.jpg")
     if not os.path.isfile(path):
@@ -644,22 +715,31 @@ def check_logo_present(claim):
 
 
 def check_runtime_dir_linked(claim):
+    """
+    The installer mirrors the repository into ~/.godfather and the runtime
+    into ~/.godmode. Both must exist after an install and be gone after an
+    uninstall.
+    """
     home = tempfile.mkdtemp(prefix="gf_link_")
     project = tempfile.mkdtemp(prefix="gf_link_proj_")
     try:
         run_command(["bash", INSTALL_SH, "--no-detect",
                      "--target-home", home, "--project", project])
-        link = os.path.join(home, ".godfather")
-        if not os.path.islink(link):
-            return False, "%s is not a link to the runtime directory" % link
-        relay = os.path.join(link, "scripts", "relay.py")
-        if not os.path.isfile(relay):
-            return False, "%s does not resolve" % relay
+        mirror = os.path.join(home, ".godfather")
+        runtime = os.path.join(home, ".godmode")
+        for name in ("scripts", "adapters", "references"):
+            if not os.path.isdir(os.path.join(mirror, name)):
+                return False, "%s is missing from the mirror" % name
+        if not os.path.isfile(os.path.join(mirror, "install.sh")):
+            return False, "the mirror has no install.sh"
+        if not os.path.isfile(os.path.join(runtime, "scripts", "relay.py")):
+            return False, "the runtime has no relay.py"
         run_command(["bash", INSTALL_SH, "--uninstall", "--no-detect",
                      "--target-home", home, "--project", project])
-        if os.path.exists(link) or os.path.islink(link):
-            return False, "%s survived the uninstall" % link
-        return True, "runtime directory linked and unlinked cleanly"
+        for name, path in (("mirror", mirror), ("runtime", runtime)):
+            if os.path.exists(path) and os.listdir(path):
+                return False, "%s still holds files after the uninstall" % name
+        return True, "mirror and runtime created, then removed cleanly"
     finally:
         shutil.rmtree(home, ignore_errors=True)
         shutil.rmtree(project, ignore_errors=True)
@@ -880,6 +960,8 @@ CHECKS = {
     "every_reference_file_exists": check_every_reference_file_exists,
     "runtime_dir_linked": check_runtime_dir_linked,
     "logo_present": check_logo_present,
+    "resolves_without_optional_deps": check_resolves_without_optional_deps,
+    "termux_detected": check_termux_detected,
 }
 
 

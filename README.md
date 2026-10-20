@@ -217,14 +217,20 @@ The installer runs under Termux. `python3` is often missing there, so use
 ```bash
 pkg install python git curl
 termux-setup-storage
-bash install-termux.sh
+bash install.sh
 ```
 
-`install-termux.sh` copies the runtime into `~/.godfather` and wires the agent
-configs that exist on the device. The relay, the resolver and the skill files
+`install.sh` detects Termux on its own and prints the Termux steps instead of
+the desktop ones. It copies the runtime into `~/.godfather` and wires the agent
+configs that exist on the device.
+
+There is no separate mobile installer. The same command works everywhere. The relay, the resolver and the skill files
 all work under Termux. Agents that need a desktop GUI do not run there, but
 they read the same skill files from the shared storage once
 `termux-setup-storage` has run.
+
+The resolver reads the agent's own provider config, so it works with no
+third-party packages installed.
 
 Run the checks with `python`, not `python3`:
 
@@ -295,7 +301,6 @@ deliverable.
 ```
 bootstrap.sh                   one-line installer from GitHub
 install.sh                     installer / uninstaller
-install-termux.sh              Termux / Android installer
 install-mcp.sh                 register the MCP server with your agents
 verify.sh                      run the self-verifying claims harness
 gf                             unified CLI (relay, clean, providers, verify)

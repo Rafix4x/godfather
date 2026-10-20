@@ -16,7 +16,7 @@ fi
 FAILED=0
 
 echo "== shell syntax =="
-for script in install.sh bootstrap.sh gf install-mcp.sh install-termux.sh verify.sh; do
+for script in install.sh bootstrap.sh gf install-mcp.sh verify.sh; do
   [ -f "$script" ] || continue
   if bash -n "$script" 2>/dev/null; then
     echo "PASS  $script"

@@ -81,18 +81,13 @@ log "installing to $ROOT"
 find "$ROOT" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null
 cp -r "$src"/. "$ROOT"/ || die "copy failed"
 
-chmod +x "$ROOT/install.sh" "$ROOT/install-termux.sh" "$ROOT/install-mcp.sh" \
+chmod +x "$ROOT/install.sh" "$ROOT/install-mcp.sh" \
   "$ROOT/verify.sh" "$ROOT/gf" "$ROOT/bootstrap.sh" 2>/dev/null
 chmod +x "$ROOT/scripts"/*.py 2>/dev/null
 
 if [[ $RUN_INSTALL -eq 1 ]]; then
-  if [[ $IS_TERMUX -eq 1 ]]; then
-    log "running the Termux installer"
-    bash "$ROOT/install-termux.sh" || die "install failed"
-  else
-    log "running the installer"
-    bash "$ROOT/install.sh" --project "$PWD" || die "install failed"
-  fi
+  log "running the installer"
+  bash "$ROOT/install.sh" --project "$PWD" || die "install failed"
   log ""
 fi
 
@@ -104,7 +99,7 @@ Termux detected.
 Next:
   pkg install python git curl          # python3 is often missing here
   termux-setup-storage                 # only for projects outside $HOME
-  bash ~/.godfather/install-termux.sh  # install into the agents on this device
+  bash ~/.godfather/install.sh         # install into the agents on this device
 
   python ~/.godfather/scripts/selftest.py
   python ~/.godfather/scripts/relay.py "your request"

@@ -39,6 +39,136 @@ def _load_json(path):
     except ValueError:
         return None
 
+def _yaml_scalar(value):
+    value = value.strip()
+    if not value:
+        return ""
+    if value[0] in "'\"" and value[-1:] == value[0] and len(value) > 1:
+        return value[1:-1]
+    low = value.lower()
+    if low in ("true", "yes", "on"):
+        return True
+    if low in ("false", "no", "off"):
+        return False
+    if low in ("null", "none", "~"):
+        return None
+    try:
+        if value.startswith("0") and value not in ("0",):
+            raise ValueError
+        return int(value)
+    except ValueError:
+        pass
+    try:
+        return float(value)
+    except ValueError:
+        return value
+
+
+def _parse_yaml_subset(text):
+    """
+    Parse the flat and one-level-nested subset of YAML that agent config
+    files actually use: scalars, inline flow collections, quoted strings and
+    nested mappings. Anything more exotic is left out, which is enough to
+    read model, base URL and key entries without a YAML dependency.
+    """
+    root = {}
+    stack = [(-1, root)]
+    for raw in text.splitlines():
+        if not raw.strip() or raw.strip().startswith("#"):
+            continue
+        indent = len(raw) - len(raw.lstrip(" "))
+        line = raw.strip()
+        if line.startswith("- "):
+            line = line[2:].strip()
+            if ":" not in line:
+                continue
+        if ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        key = key.strip().strip("'\"")
+        value = value.strip()
+        while stack and indent <= stack[-1][0]:
+            stack.pop()
+        parent = stack[-1][1] if stack else root
+        if not value:
+            child = {}
+            if isinstance(parent, dict):
+                parent[key] = child
+            stack.append((indent, child))
+            continue
+        if value.startswith("[") and value.endswith("]"):
+            body = value[1:-1].strip()
+            items = []
+            if body:
+                for part in body.split(","):
+                    part = part.strip()
+                    if part:
+                        items.append(_yaml_scalar(part))
+            if isinstance(parent, dict):
+                parent[key] = items
+            continue
+        if value.startswith("{") and value.endswith("}"):
+            body = value[1:-1].strip()
+            mapping = {}
+            if body:
+                for part in body.split(","):
+                    if ":" in part:
+                        k, _, v = part.partition(":")
+                        mapping[k.strip().strip("'\"")] = _yaml_scalar(v)
+            if isinstance(parent, dict):
+                parent[key] = mapping
+            continue
+        if isinstance(parent, dict):
+            parent[key] = _yaml_scalar(value)
+    return root
+
+
+def _parse_toml_subset(text):
+    """
+    Parse the flat table subset of TOML that agent config files use: bare
+    key/value pairs, [table] headers and quoted keys. Arrays of tables and
+    inline tables are out of scope.
+    """
+    root = {}
+    table = root
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            name = line[1:-1].strip()
+            if name.startswith("["):
+                name = name[1:-1].strip()
+            table = root
+            for part in name.split("."):
+                part = part.strip().strip("'\"")
+                if not part:
+                    continue
+                nxt = table.get(part)
+                if not isinstance(nxt, dict):
+                    nxt = {}
+                    table[part] = nxt
+                table = nxt
+            continue
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip().strip("'\"")
+        value = value.strip()
+        if value.startswith("[") and value.endswith("]"):
+            body = value[1:-1].strip()
+            items = []
+            if body:
+                for part in body.split(","):
+                    part = part.strip()
+                    if part:
+                        items.append(_yaml_scalar(part))
+            table[key] = items
+            continue
+        table[key] = _yaml_scalar(value)
+    return root
+
+
 def _load_yaml(path):
     raw = _read(path)
     if not raw:
@@ -47,7 +177,12 @@ def _load_yaml(path):
         import yaml
         return yaml.safe_load(raw)
     except Exception:
+        pass
+    try:
+        return _parse_yaml_subset(raw)
+    except Exception:
         return None
+
 
 def _load_toml(path):
     raw = _read(path)
@@ -57,11 +192,16 @@ def _load_toml(path):
         import tomllib
         return tomllib.loads(raw)
     except Exception:
-        try:
-            import toml
-            return toml.loads(raw)
-        except Exception:
-            return None
+        pass
+    try:
+        import toml
+        return toml.loads(raw)
+    except Exception:
+        pass
+    try:
+        return _parse_toml_subset(raw)
+    except Exception:
+        return None
 
 def _dotenv(path):
     raw = _read(path)
