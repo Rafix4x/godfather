@@ -4,7 +4,9 @@ set -uo pipefail
 REPO="${GODFATHER_REPO:-Rafix4x/godfather}"
 BRANCH="${GODFATHER_BRANCH:-main}"
 ROOT="${GODFATHER_HOME:-$HOME/.godfather}"
+API_URL="https://api.github.com/repos/${REPO}/commits/${BRANCH}"
 TARBALL_URL="https://codeload.github.com/${REPO}/tar.gz/refs/heads/${BRANCH}"
+RESOLVED_SHA=""
 
 RUN_INSTALL=0
 for arg in "$@"; do
@@ -45,12 +47,32 @@ tmp="$(mktemp -d 2>/dev/null || mktemp -d -t godfather)"
 trap 'rm -rf "$tmp"' EXIT
 
 log "downloading ${REPO}@${BRANCH}"
+
+if command -v curl >/dev/null 2>&1; then
+  RESOLVED_SHA="$(curl -fsSL -H "Accept: application/vnd.github+json" \
+    -H "User-Agent: godfather-bootstrap" "$API_URL" 2>/dev/null \
+    | sed -n 's/^{"sha":"\([0-9a-f]\{40\}\)".*/\1/p' \
+    | head -1)"
+fi
+if [[ -z "$RESOLVED_SHA" ]]; then
+  RESOLVED_SHA="$(wget -qO- --header="User-Agent: godfather-bootstrap" \
+    "$API_URL" 2>/dev/null \
+    | sed -n 's/^{"sha":"\([0-9a-f]\{40\}\)".*/\1/p' \
+    | head -1)"
+fi
+
+if [[ -n "$RESOLVED_SHA" ]]; then
+  TARBALL_URL="https://codeload.github.com/${REPO}/tar.gz/${RESOLVED_SHA}"
+  log "  resolved ${RESOLVED_SHA:0:12}"
+fi
+
 if command -v curl >/dev/null 2>&1; then
   curl -fsSL "$TARBALL_URL" -o "$tmp/pkg.tar.gz" || die "download failed"
 else
   wget -qO "$tmp/pkg.tar.gz" "$TARBALL_URL" || die "download failed"
 fi
 
+tar tzf "$tmp/pkg.tar.gz" >/dev/null 2>&1 || die "download failed"
 tar xzf "$tmp/pkg.tar.gz" -C "$tmp" || die "extract failed"
 src="$(find "$tmp" -maxdepth 1 -mindepth 1 -type d | head -1)"
 [[ -d "$src" ]] || die "unexpected archive layout"
@@ -60,7 +82,7 @@ find "$ROOT" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null
 cp -r "$src"/. "$ROOT"/ || die "copy failed"
 
 chmod +x "$ROOT/install.sh" "$ROOT/install-termux.sh" "$ROOT/install-mcp.sh" \
-  "$ROOT/verify.sh" "$ROOT/gf" 2>/dev/null
+  "$ROOT/verify.sh" "$ROOT/gf" "$ROOT/bootstrap.sh" 2>/dev/null
 chmod +x "$ROOT/scripts"/*.py 2>/dev/null
 
 if [[ $RUN_INSTALL -eq 1 ]]; then
