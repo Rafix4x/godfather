@@ -5,7 +5,7 @@
 One command. Every coding agent you own works to a signed-off engagement
 scope — no hedges, no declining, no moral commentary, full procedures.
 
-Works with **Claude Code, Codex CLI, Cursor, Windsurf, Gemini CLI, Aider,
+Works with **Claude Code, Codex CLI, Cursor, Windsurf, Gemini CLI,
 Cline, Roo Code, Continue, OpenClaw, OpenCode** — and Hermes Agent.
 
 ```bash
@@ -55,7 +55,7 @@ python3 ~/.godmode/scripts/relay.py --frame card "the user's request"
 ```
 
 The relay resolves the provider from **your** config — Claude Code
-`settings.json`, Codex `config.toml`, Gemini `settings.json`, Cursor, Aider,
+`settings.json`, Codex `config.toml`, Gemini `settings.json`, Cursor,
 Continue, Hermes `config.yaml`, OpenClaw `openclaw.json`, OpenCode
 `opencode.json`, or environment variables. No provider is hardcoded, so this
 works with whatever you already pay for.
@@ -124,7 +124,6 @@ Every write is marker-delimited and per-agent
 | Cursor | `~/.cursor/rules/godmode.mdc` | `.cursor/rules/godmode.mdc` |
 | Windsurf | `~/.codeium/windsurf/memories/global_rules.md` | `.windsurf/rules/godmode.md` |
 | Gemini CLI | `~/.gemini/GEMINI.md` | `GEMINI.md` |
-| Aider | — | `CONVENTIONS.md` + `~/.aider.conf.yml` `read:` entry |
 | Cline | `~/Documents/Cline/Rules/godmode.md` | `.clinerules/godmode.md` |
 | Roo Code | `~/Documents/Roo/Rules/godmode.md` | `.roo/rules/godmode.md` |
 | Continue | `~/.continue/rules/godmode.md` | `.continue/rules/godmode.md` |

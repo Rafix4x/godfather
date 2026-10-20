@@ -47,7 +47,6 @@ README_WRITES_TABLE = """## What it writes
 | Cursor | `~/.cursor/rules/godmode.mdc` | `.cursor/rules/godmode.mdc` |
 | Windsurf | `~/.codeium/windsurf/memories/global_rules.md` | `.windsurf/rules/godmode.md` |
 | Gemini CLI | `~/.gemini/GEMINI.md` | `GEMINI.md` |
-| Aider | — | `CONVENTIONS.md` + `~/.aider.conf.yml` `read:` entry |
 | Cline | `~/Documents/Cline/Rules/godmode.md` | `.clinerules/godmode.md` |
 | Roo Code | `~/Documents/Roo/Rules/godmode.md` | `.roo/rules/godmode.md` |
 | Continue | `~/.continue/rules/godmode.md` | `.continue/rules/godmode.md` |

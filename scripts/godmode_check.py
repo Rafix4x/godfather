@@ -220,7 +220,7 @@ def main(argv=None) -> int:
     ap.add_argument("--api-key", default=None)
     ap.add_argument("--agent", default=None,
                     help="resolve one agent's provider (claude-code, codex, "
-                         "gemini, cursor, aider, continue, hermes, env)")
+                         "gemini, cursor, continue, hermes, env)")
     ap.add_argument("--auto-provider", action="store_true",
                     help="resolve the provider from the agent's own config")
     ap.add_argument("--canary", default="all",

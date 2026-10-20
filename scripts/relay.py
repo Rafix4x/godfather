@@ -5,7 +5,7 @@ GODMODE3 system block and framing applied, escalating across framing modes and
 across sibling models on that same provider.
 
 Provider is resolved from the agent's own config (claude, codex, gemini, cursor,
-aider, continue, hermes) or from environment variables. No provider is
+continue, hermes) or from environment variables. No provider is
 hardcoded.
 
     python3 relay.py "your request"

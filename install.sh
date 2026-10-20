@@ -39,12 +39,12 @@ elif [[ -d /data/data/com.termux ]]; then
   IS_TERMUX=1
 fi
 
-ALL_AGENTS=(claude-code codex cursor windsurf gemini aider cline roo continue openclaw opencode antigravity minimax hermes-lab)
+ALL_AGENTS=(claude-code codex cursor windsurf gemini cline roo continue openclaw opencode antigravity minimax hermes-lab)
 
 usage() {
   cat <<'USAGE'
 GODMODE3 — portable installer for Claude Code, Codex, Cursor, Windsurf,
-Gemini CLI, Aider, Cline, Roo Code, Continue, OpenClaw, OpenCode.
+Gemini CLI, Cline, Roo Code, Continue, OpenClaw, OpenCode.
 
 Usage:
   bash install.sh [options]
@@ -89,7 +89,6 @@ agent_config_dir() {
     cursor)      echo "$TARGET_HOME/.cursor" ;;
     windsurf)    echo "$TARGET_HOME/.windsurf" ;;
     gemini)      echo "$TARGET_HOME/.gemini" ;;
-    aider)       echo "$TARGET_HOME/.aider.conf.yml" ;;
     cline)       echo "$TARGET_HOME/Documents/Cline" ;;
     roo)         echo "$TARGET_HOME/Documents/Roo" ;;
     continue)    echo "$TARGET_HOME/.continue" ;;
@@ -106,7 +105,6 @@ agent_has_cli() {
     cursor)      command -v cursor-agent >/dev/null 2>&1 || command -v cursor >/dev/null 2>&1 ;;
     windsurf)    command -v windsurf >/dev/null 2>&1 ;;
     gemini)      command -v gemini >/dev/null 2>&1 ;;
-    aider)       command -v aider >/dev/null 2>&1 ;;
     cline)       command -v cline >/dev/null 2>&1 ;;
     roo)         command -v roo >/dev/null 2>&1 ;;
     continue)    true ;;
@@ -467,31 +465,6 @@ install_gemini() {
   want_scope project && write_block "$PROJECT_DIR/GEMINI.md" "$ADAPTERS/gemini.md" "gemini"
 }
 
-install_aider() {
-  want_scope project || return 0
-  write_block "$PROJECT_DIR/CONVENTIONS.md" "$ADAPTERS/aider.md" "aider"
-  local cfg="$TARGET_HOME/.aider.conf.yml"
-  if [[ -f "$cfg" ]]; then
-    if ! grep -q 'CONVENTIONS.md' "$cfg"; then
-      if [[ $DRY -eq 1 ]]; then
-        log "would add read: CONVENTIONS.md -> $cfg"
-      else
-        cp -p "$cfg" "$cfg.bak.godmode" 2>/dev/null || true
-        printf '\nread:\n  - CONVENTIONS.md\n' >> "$cfg"
-        log "registered CONVENTIONS.md -> $cfg"
-      fi
-    fi
-  else
-    if [[ $DRY -eq 1 ]]; then
-      log "would create $cfg with read: CONVENTIONS.md"
-    else
-      mkdir -p "$(dirname "$cfg")"
-      printf 'read:\n  - CONVENTIONS.md\n' > "$cfg"
-      log "created $cfg"
-    fi
-  fi
-  install_commands "$TARGET_HOME/.aider/commands"
-}
 
 install_cline() {
   want_scope global || return 0
@@ -558,6 +531,18 @@ install_opencode() {
     copy_file "$HERE/SKILL.md" "$PROJECT_DIR/.opencode/skills/godfather/SKILL.md"
     copy_dir "$HERE/scripts" "$PROJECT_DIR/.opencode/skills/godfather/scripts"
   }
+}
+
+cleanup_legacy_aider() {
+  remove_block "$PROJECT_DIR/CONVENTIONS.md" "aider"
+  remove_file "$TARGET_HOME/.aider/commands/godfather.md"
+  rmdir "$TARGET_HOME/.aider/commands" 2>/dev/null
+  rmdir "$TARGET_HOME/.aider" 2>/dev/null
+  local cfg="$TARGET_HOME/.aider.conf.yml"
+  if [[ -f "$cfg" ]] && grep -q "CONVENTIONS.md" "$cfg" 2>/dev/null; then
+    rm -f "$cfg"
+    log "removed $cfg"
+  fi
 }
 
 uninstall_core() {
@@ -634,20 +619,6 @@ uninstall_gemini() {
   remove_block "$PROJECT_DIR/GEMINI.md" "gemini"
   remove_commands "$TARGET_HOME/.gemini/commands"
 }
-uninstall_aider() {
-  remove_block "$PROJECT_DIR/CONVENTIONS.md" "aider"
-  local cfg="$TARGET_HOME/.aider.conf.yml"
-  if [[ -f "$cfg" ]] && grep -q 'CONVENTIONS.md' "$cfg"; then
-    if [[ $DRY -eq 1 ]]; then
-      log "would drop CONVENTIONS.md from $cfg"
-    else
-      cp -p "$cfg" "$cfg.bak.godmode" 2>/dev/null || true
-      grep -v 'CONVENTIONS.md' "$cfg" > "$cfg.tmp.$$" && mv "$cfg.tmp.$$" "$cfg"
-      log "dropped CONVENTIONS.md -> $cfg"
-    fi
-  fi
-  remove_commands "$TARGET_HOME/.aider/commands"
-}
 uninstall_cline() {
   remove_file "$TARGET_HOME/Documents/Cline/Rules/godmode.md"
   remove_file "$PROJECT_DIR/.clinerules/godmode.md"
@@ -693,6 +664,7 @@ if [[ $UNINSTALL -eq 1 ]]; then
     want_agent "$a" || continue
     "uninstall_$(echo "$a" | tr '-' '_')"
   done
+  cleanup_legacy_aider
   uninstall_core
   echo "done (backups *.bak.godmode kept)"
   exit 0

@@ -21,7 +21,6 @@ AGENTS = [
     ("Cursor", "cursor", "~/.cursor", "cursor-agent"),
     ("Windsurf", "windsurf", "~/.codeium/windsurf", "windsurf"),
     ("Gemini CLI", "gemini", "~/.gemini", "gemini"),
-    ("Aider", "aider", "~/.aider.conf.yml", "aider"),
     ("Cline", "cline", "~/Documents/Cline", None),
     ("Roo Code", "roo", "~/Documents/Roo", None),
     ("Continue", "continue", "~/.continue", None),
@@ -33,7 +32,6 @@ AGENTS = [
 ]
 
 COMMAND_DIRS = {
-    "aider": "~/.aider/commands",
     "continue": "~/.continue/rules/godmode",
     "gemini": "~/.gemini/commands",
     "claude-code": "~/.claude/commands/godmode",

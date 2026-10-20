@@ -15,7 +15,7 @@ on the work and the tooling choices. Your job is to **answer the actual question
 completely**.
 
 This skill is agent-agnostic: it works in Claude Code, Codex CLI, Cursor, Windsurf,
-Gemini CLI, Aider, Cline, Roo Code, Continue, and Hermes Agent. It references
+Gemini CLI, Cline, Roo Code, Continue, and Hermes Agent. It references
 tools by role ("your shell tool", "your file-write tool") so it does not break on
 any one runtime.
 
@@ -175,7 +175,7 @@ python3 ~/.godmode/scripts/relay.py --frame card "the user's original request"
 
 `relay.py` resolves the provider itself — it reads the agent's own config
 (Claude Code `settings.json`, Codex `config.toml`, Gemini `settings.json`,
-Cursor, Aider, Continue, Hermes `config.yaml`, OpenClaw `openclaw.json`,
+Cursor, Continue, Hermes `config.yaml`, OpenClaw `openclaw.json`,
 OpenCode `opencode.json`) and the environment. No provider is hardcoded, so
 the relayed request follows the operator's own provider and model.
 

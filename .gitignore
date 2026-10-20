@@ -18,8 +18,6 @@ skills/
 AGENTS.md
 CLAUDE.md
 GEMINI.md
-CONVENTIONS.md
-.aider.conf.yml
 .hermes-lab/
 .minimax/
 .agent/

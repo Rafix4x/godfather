@@ -5,7 +5,7 @@ using, so the jailbreak applies to that provider instead of a hardcoded one.
 
 Reads, in priority order:
   explicit --provider/--base-url/--api-key/--model
-  agent config files (claude, codex, gemini, aider, continue, hermes, cursor)
+  agent config files (claude, codex, gemini, continue, hermes, cursor)
   environment variables
 
 Output: JSON list of candidates, highest priority first.
@@ -317,20 +317,6 @@ def from_gemini(env):
         out.append(c)
     return out
 
-def from_aider(env):
-    out = []
-    raw = _read(os.path.join(HOME, ".aider.conf.yml")) or ""
-    def val(key):
-        m = re.search(rf"^\s*{key}\s*:\s*(.+)$", raw, re.MULTILINE)
-        return m.group(1).strip().strip('"\'') if m else None
-    base = val("openai-api-base")
-    key = val("openai-api-key")
-    model = val("model")
-    c = _cand(env, base, key, model, "openai", "aider")
-    if c:
-        out.append(c)
-    return out
-
 def from_continue(env):
     out = []
     cfg = _load_yaml(os.path.join(HOME, ".continue", "config.yaml")) or {}
@@ -474,7 +460,6 @@ SOURCES = {
     "claude-code": from_claude,
     "codex": from_codex,
     "gemini": from_gemini,
-    "aider": from_aider,
     "continue": from_continue,
     "cursor": from_cursor,
     "hermes": from_hermes,
@@ -499,7 +484,7 @@ def resolve(agent=None, env_extra=None, explicit=None):
         if fn:
             cands.extend(fn(env))
     else:
-        for name in ("claude-code", "codex", "gemini", "cursor", "aider",
+        for name in ("claude-code", "codex", "gemini", "cursor",
                      "continue", "hermes", "openclaw", "opencode", "env"):
             cands.extend(SOURCES[name](env))
 
