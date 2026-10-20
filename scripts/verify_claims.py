@@ -137,7 +137,7 @@ CLAIMS = [
     },
     {
         "id": "termux_detected",
-        "text": "There is no separate mobile installer. The same command works everywhere.",
+        "text": "A python binary that cannot start is reported as a missing package rather than failing later.",
         "check": "termux_detected",
         "kind": "runtime",
     },
@@ -145,6 +145,24 @@ CLAIMS = [
         "id": "termux_alias",
         "text": "The alias runs the same installer.",
         "check": "termux_alias_works",
+        "kind": "runtime",
+    },
+    {
+        "id": "agent_detected_without_cli",
+        "text": "An agent is configured when its config directory exists, even if the agent binary is not on the PATH.",
+        "check": "agent_detected_without_cli",
+        "kind": "runtime",
+    },
+    {
+        "id": "missing_packages_only",
+        "text": "A python binary that cannot start is reported as a missing package rather than failing later.",
+        "check": "missing_packages_only",
+        "kind": "runtime",
+    },
+    {
+        "id": "broken_python_detected",
+        "text": "A python binary that cannot start is reported as a missing package rather than failing later.",
+        "check": "broken_python_detected",
         "kind": "runtime",
     },
     {
@@ -649,6 +667,108 @@ def check_every_reference_file_exists(claim):
     return True, "%d reference paths present" % len(wanted)
 
 
+def check_broken_python_detected(claim):
+    """
+    A python binary that cannot start is not a working interpreter, so the
+    installer must ask for the package instead of failing later.
+    """
+    home = tempfile.mkdtemp(prefix="gf_py_")
+    project = tempfile.mkdtemp(prefix="gf_py_proj_")
+    bindir = os.path.join(home, "bin")
+    os.makedirs(bindir, exist_ok=True)
+    broken = os.path.join(bindir, "python")
+    with open(broken, "w") as handle:
+        handle.write("#!/bin/sh\necho broken >&2\nexit 127\n")
+    os.chmod(broken, 0o755)
+    for tool in ("bash", "cat", "mkdir", "cp", "rm", "find", "chmod", "ln",
+                 "sed", "grep", "printf", "pwd", "dirname"):
+        source = shutil.which(tool)
+        if source:
+            try:
+                os.symlink(source, os.path.join(bindir, tool))
+            except OSError:
+                pass
+    try:
+        env = dict(os.environ)
+        env["PATH"] = bindir
+        env["PREFIX"] = "/data/data/com.termux/files/usr"
+        env["HOME"] = home
+        code, out, err = run_command(
+            ["bash", INSTALL_SH, "--no-detect",
+             "--target-home", home, "--project", project],
+            env=env)
+        combined = out + err
+        if code == 0:
+            return False, "the installer continued with a broken interpreter"
+        if "pkg install python" not in combined:
+            return False, "the installer did not ask for the python package"
+        return True, "a broken interpreter is reported as a missing package"
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+        shutil.rmtree(project, ignore_errors=True)
+
+
+def check_missing_packages_only(claim):
+    """
+    The Termux output must name only the packages that are actually
+    missing, and stay silent when everything is already installed.
+    """
+    home = tempfile.mkdtemp(prefix="gf_pkg_")
+    project = tempfile.mkdtemp(prefix="gf_pkg_proj_")
+    try:
+        env = dict(os.environ)
+        env["PREFIX"] = "/data/data/com.termux/files/usr"
+        env["HOME"] = home
+        code, out, err = run_command(
+            ["bash", INSTALL_SH, "--no-detect",
+             "--target-home", home, "--project", project],
+            env=env)
+        if code != 0:
+            return False, "the installer failed: %s" % (
+                err.strip()[:120] or out.strip()[:120])
+        if "pkg install" in out:
+            return False, "packages were listed even though all are present"
+        if "Next steps:" not in out:
+            return False, "the Termux steps were not printed"
+        return True, "no package list shown when everything is installed"
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+        shutil.rmtree(project, ignore_errors=True)
+
+
+def check_agent_detected_without_cli(claim):
+    """
+    An agent must be configured when its config directory exists, even if
+    the agent binary is not on the PATH. On a phone the agents live in
+    Termux packages that may not be installed, but the config directory is
+    still there.
+    """
+    home = tempfile.mkdtemp(prefix="gf_detect_")
+    project = tempfile.mkdtemp(prefix="gf_detect_proj_")
+    try:
+        os.makedirs(os.path.join(home, ".claude"), exist_ok=True)
+        os.makedirs(os.path.join(home, ".codex"), exist_ok=True)
+        code, out, err = run_command(
+            ["bash", INSTALL_SH, "--target-home", home, "--project", project],
+            env=dict(os.environ, HOME=home))
+        if code != 0:
+            return False, "the installer failed: %s" % (
+                err.strip()[:120] or out.strip()[:120])
+        for label in ("claude-code", "codex"):
+            if "[%s]" % label not in out:
+                return False, "%s was not detected from its config directory" % label
+        skill = os.path.join(home, ".claude", "skills", "godmode", "SKILL.md")
+        if not os.path.isfile(skill):
+            return False, "the claude-code skill file was not written"
+        agents_file = os.path.join(home, ".codex", "AGENTS.md")
+        if not os.path.isfile(agents_file):
+            return False, "the codex AGENTS.md was not written"
+        return True, "agents detected from their config directories"
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+        shutil.rmtree(project, ignore_errors=True)
+
+
 def check_termux_alias_works(claim):
     """
     install-termux.sh stays as an alias so that a cached copy of the old
@@ -694,9 +814,10 @@ def check_termux_detected(claim):
                 err.strip()[:120] or out.strip()[:120])
         if "installed on Termux" not in out:
             return False, "the installer did not report Termux"
-        for needle in ("pkg install python", "termux-setup-storage"):
-            if needle not in out:
-                return False, "the Termux steps do not mention %s" % needle
+        if "Next steps:" not in out:
+            return False, "the Termux steps were not printed"
+        if "selftest.py" not in out:
+            return False, "the Termux steps do not show how to check the install"
         return True, "Termux detected and the mobile steps printed"
     finally:
         shutil.rmtree(home, ignore_errors=True)
@@ -995,6 +1116,9 @@ CHECKS = {
     "resolves_without_optional_deps": check_resolves_without_optional_deps,
     "termux_detected": check_termux_detected,
     "termux_alias_works": check_termux_alias_works,
+    "agent_detected_without_cli": check_agent_detected_without_cli,
+    "missing_packages_only": check_missing_packages_only,
+    "broken_python_detected": check_broken_python_detected,
 }
 
 

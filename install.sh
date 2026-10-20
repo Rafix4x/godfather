@@ -20,12 +20,15 @@ SCOPE="both"
 AGENT_FILTER=""
 
 PY=""
-if command -v python3 >/dev/null 2>&1; then
+if command -v python3 >/dev/null 2>&1 && python3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)" >/dev/null 2>&1; then
   PY=python3
-elif command -v python >/dev/null 2>&1; then
+elif command -v python >/dev/null 2>&1 && python -c "import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)" >/dev/null 2>&1; then
   PY=python
 else
-  echo "error: no python interpreter found. Install one (apt install python3, brew install python, pkg install python)." >&2
+  echo "error: no working Python 3.9 or newer found." >&2
+  echo "  On Termux:  pkg install python" >&2
+  echo "  On Debian:  sudo apt install python3" >&2
+  echo "  On macOS:   brew install python" >&2
   exit 1
 fi
 
@@ -79,6 +82,23 @@ while [[ $# -gt 0 ]]; do
 done
 
 
+agent_config_dir() {
+  case "$1" in
+    claude-code) echo "$TARGET_HOME/.claude" ;;
+    codex)       echo "$TARGET_HOME/.codex" ;;
+    cursor)      echo "$TARGET_HOME/.cursor" ;;
+    windsurf)    echo "$TARGET_HOME/.windsurf" ;;
+    gemini)      echo "$TARGET_HOME/.gemini" ;;
+    aider)       echo "$TARGET_HOME/.aider.conf.yml" ;;
+    cline)       echo "$TARGET_HOME/Documents/Cline" ;;
+    roo)         echo "$TARGET_HOME/Documents/Roo" ;;
+    continue)    echo "$TARGET_HOME/.continue" ;;
+    openclaw)    echo "$TARGET_HOME/.openclaw" ;;
+    opencode)    echo "$TARGET_HOME/.config/opencode" ;;
+    *)           echo "" ;;
+  esac
+}
+
 agent_has_cli() {
   case "$1" in
     claude-code) command -v claude >/dev/null 2>&1 ;;
@@ -94,6 +114,14 @@ agent_has_cli() {
     opencode)    command -v opencode >/dev/null 2>&1 ;;
     *)           false ;;
   esac
+}
+
+agent_present() {
+  agent_has_cli "$1" && return 0
+  local dir
+  dir="$(agent_config_dir "$1")"
+  [[ -n "$dir" && -e "$dir" ]] && return 0
+  return 1
 }
 
 want_agent() {
@@ -287,23 +315,28 @@ mirror_repo() {
     log "kept    $root (link to the runtime directory)"
     return 0
   fi
+  local here="$HERE"
+  if [[ "$(cd "$here" && pwd -P)" == "$(cd "$root" 2>/dev/null && pwd -P)" ]]; then
+    log "kept    $root (already the current directory)"
+    return 0
+  fi
   mkdir -p "$root"
   for item in install.sh bootstrap.sh SKILL.md README.md gf verify.sh install-mcp.sh; do
     if [[ -f "$HERE/$item" ]]; then
-      cp -f "$HERE/$item" "$root/$item"
+      cp -f "$HERE/$item" "$root/$item" 2>/dev/null
     fi
   done
   if [[ -d "$HERE/scripts" ]]; then
     mkdir -p "$root/scripts"
-    cp -f "$HERE/scripts/"*.py "$root/scripts/"
+    cp -f "$HERE/scripts/"*.py "$root/scripts/" 2>/dev/null
   fi
   if [[ -d "$HERE/adapters" ]]; then
     mkdir -p "$root/adapters"
-    cp -f "$HERE/adapters/"*.md "$root/adapters/"
+    cp -f "$HERE/adapters/"*.md "$root/adapters/" 2>/dev/null
   fi
   if [[ -d "$HERE/references" ]]; then
     mkdir -p "$root/references"
-    cp -rf "$HERE/references/." "$root/references/"
+    cp -rf "$HERE/references/." "$root/references/" 2>/dev/null
   fi
   if [[ -d "$HERE/assets" ]]; then
     mkdir -p "$root/assets"
@@ -546,7 +579,7 @@ install_core
 for a in "${ALL_AGENTS[@]}"; do
   want_agent "$a" || continue
   if [[ $NO_DETECT -eq 0 ]]; then
-    if ! agent_has_cli "$a"; then
+    if ! agent_present "$a"; then
       continue
     fi
   fi
@@ -561,17 +594,27 @@ if [[ $DRY -eq 1 ]]; then
 elif [[ $IS_TERMUX -eq 1 ]]; then
   echo "installed on Termux. Restart your agent session(s) so the rules load."
   echo ""
+  missing=()
+  if [[ -z "$PY" ]]; then
+    missing+=("python")
+  fi
+  command -v git >/dev/null 2>&1 || missing+=("git")
+  command -v curl >/dev/null 2>&1 || missing+=("curl")
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "Missing packages:"
+    echo "  pkg install ${missing[*]}"
+    echo ""
+  fi
   echo "Next steps:"
-  echo "  1. Required packages:"
-  echo "       pkg install python git curl"
-  echo "  2. Shared storage access, only for projects outside \$HOME:"
-  echo "       termux-setup-storage"
-  echo "  3. Check the install:"
+  echo "  1. Check the install:"
   echo "       $PY $TARGET_HOME/.godfather/scripts/selftest.py"
-  echo "  4. Run the relay:"
+  echo "  2. Run the relay:"
   echo "       $PY $TARGET_HOME/.godfather/scripts/relay.py \"your request\""
   echo ""
-  echo "Note: python3 is often absent on Termux, so use python."
+  if [[ ! -d "$HOME/storage" ]]; then
+    echo "Note: run termux-setup-storage if you keep projects outside \$HOME."
+    echo ""
+  fi
   echo "Note: agents that need a desktop GUI do not run here, but the"
   echo "      relay, the resolver and the skill files all do."
 else

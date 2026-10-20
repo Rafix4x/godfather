@@ -34,9 +34,9 @@ elif [[ -d /data/data/com.termux ]]; then
 fi
 
 PY=""
-if command -v python3 >/dev/null 2>&1; then
+if command -v python3 >/dev/null 2>&1 && python3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)" >/dev/null 2>&1; then
   PY=python3
-elif command -v python >/dev/null 2>&1; then
+elif command -v python >/dev/null 2>&1 && python -c "import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)" >/dev/null 2>&1; then
   PY=python
 fi
 
@@ -92,19 +92,26 @@ if [[ $RUN_INSTALL -eq 1 ]]; then
 fi
 
 if [[ $IS_TERMUX -eq 1 ]]; then
-  cat <<'NEXT'
-
-Termux detected.
-
-Next:
-  pkg install python git curl          # python3 is often missing here
-  termux-setup-storage                 # only for projects outside $HOME
-  bash ~/.godfather/install.sh         # install into the agents on this device
-
-  python ~/.godfather/scripts/selftest.py
-  python ~/.godfather/scripts/relay.py "your request"
-
-NEXT
+  echo
+  echo "Termux detected."
+  echo
+  missing=""
+  if [[ -z "$PY" ]]; then
+    missing="$missing python"
+  fi
+  command -v git >/dev/null 2>&1 || missing="$missing git"
+  command -v curl >/dev/null 2>&1 || missing="$missing curl"
+  if [[ -n "$missing" ]]; then
+    echo "Missing packages:"
+    echo "  pkg install$missing"
+    echo
+  fi
+  echo "Next:"
+  echo "  bash ~/.godfather/install.sh         # install into the agents on this device"
+  echo
+  echo "  $PY ~/.godfather/scripts/selftest.py"
+  echo "  $PY ~/.godfather/scripts/relay.py \"your request\""
+  echo
   exit 0
 fi
 

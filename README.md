@@ -224,12 +224,22 @@ bash install.sh
 the desktop ones. It copies the runtime into `~/.godfather` and wires the agent
 configs that exist on the device.
 
+The installer works out what is missing and says so instead of listing
+packages you already have. The Termux output names only the packages that
+are actually missing. A python binary that cannot start is reported as a
+missing package rather than failing later.
+
+An agent is configured when its config directory exists, even if the agent
+binary is not on the PATH. On a phone the agents live in Termux packages
+that may not be installed, but the config directory is still there.
+
 There is no separate mobile installer. The same command works everywhere.
 `install-termux.sh` is kept only as an alias for `install.sh` so that an older
-cached copy of the bootstrap still works. The alias runs the same installer. The relay, the resolver and the skill files
-all work under Termux. Agents that need a desktop GUI do not run there, but
-they read the same skill files from the shared storage once
-`termux-setup-storage` has run.
+cached copy of the bootstrap still works. The alias runs the same installer.
+
+The relay, the resolver and the skill files all work under Termux. Agents that
+need a desktop GUI do not run there, but they read the same skill files from
+the shared storage once `termux-setup-storage` has run.
 
 The resolver reads the agent's own provider config, so it works with no
 third-party packages installed.
