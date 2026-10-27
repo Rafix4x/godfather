@@ -477,6 +477,29 @@ def from_env(env):
                 out.append(c)
     return out
 
+def from_cline(env):
+    out = []
+    cfg = _load_json(os.path.join(HOME, ".cline", "data", "settings",
+                                  "providers.json")) or {}
+    last = cfg.get("lastUsedProvider")
+    for name, p in (cfg.get("providers") or {}).items():
+        if not isinstance(p, dict):
+            continue
+        s = p.get("settings") or {}
+        base = s.get("baseUrl")
+        key = s.get("apiKey")
+        model = s.get("model")
+        if not base or not key:
+            continue
+        transport = "anthropic" if name == "anthropic" else "openai"
+        c = _cand(env, base, key, model, transport, "cline:" + name)
+        if c:
+            if name == cfg.get("lastUsedProvider"):
+                c["source"] += " (last used)"
+            out.append(c)
+    return out
+
+
 SOURCES = {
     "claude-code": from_claude,
     "codex": from_codex,
@@ -486,6 +509,7 @@ SOURCES = {
     "hermes": from_hermes,
     "openclaw": from_openclaw,
     "opencode": from_opencode,
+    "cline": from_cline,
     "env": from_env,
 }
 
@@ -506,7 +530,8 @@ def resolve(agent=None, env_extra=None, explicit=None):
             cands.extend(fn(env))
     else:
         for name in ("claude-code", "codex", "gemini", "cursor",
-                     "continue", "hermes", "openclaw", "opencode", "env"):
+                     "continue", "cline", "hermes", "openclaw", "opencode",
+                     "env"):
             cands.extend(SOURCES[name](env))
 
     seen = set()
