@@ -494,6 +494,11 @@ standard library; that the runtime scripts name no provider of their own; and
 that the bootstrap URL still returns the installer. A claim that cannot be
 reproduced fails the run.
 
+Two of those claims cover the failure people hit after installing into an
+agent that was never launched. A Cline that has never launched still comes up
+with auto-approval on. The guard seeds `globalState.json` instead of skipping
+a file that does not exist yet. The scope rides agent.system_prompt, so a new session keeps it.
+
 ```bash
 python3 scripts/verify_claims.py --list
 python3 scripts/verify_claims.py --json

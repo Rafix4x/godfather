@@ -225,6 +225,18 @@ CLAIMS = [
         "kind": "runtime",
     },
     {
+        "id": "cline_guard_survives_a_fresh_launch",
+        "text": "A Cline that has never launched still comes up with auto-approval on.",
+        "check": "cline_guard_survives_a_fresh_launch",
+        "kind": "runtime",
+    },
+    {
+        "id": "hermes_scope_survives_a_new_session",
+        "text": "The scope rides agent.system_prompt, so a new session keeps it.",
+        "check": "hermes_scope_survives_a_new_session",
+        "kind": "runtime",
+    },
+    {
         "id": "scope_precedence_is_installed",
         "text": "The scope block is in the skill and in every adapter.",
         "check": "scope_precedence_is_installed",
@@ -1339,7 +1351,79 @@ def check_guard_layer_covers_agents(claim):
     for spec in list(guard.GUARDS.values()) + list(guard.STATE_GUARDS.values()):
         if not spec.get("source"):
             return False, "a guard has no source"
+    overlay_agents = set(getattr(guard, "PROMPT_OVERLAYS", {}))
+    if "hermes" not in overlay_agents:
+        return False, "hermes has no prompt overlay, so the scope dies with the session"
     return True, "the guard layer covers the config and state agents"
+
+
+def check_cline_guard_survives_a_fresh_launch(claim):
+    """A state file that does not exist yet must still come out permissive.
+
+    This is the 'installed but it does not work' bug: state_apply skipped an
+    agent that had never launched, so the extension booted on its shipped
+    defaults with auto-approval off.
+    """
+    import tempfile
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        import guard
+    except ImportError:
+        return False, "guard.py does not import"
+
+    home = tempfile.mkdtemp(prefix="gf_cline_")
+    saved = guard.HOME
+    try:
+        guard.HOME = home
+        spec = guard.STATE_GUARDS["cline"]
+        original = list(spec["paths"])
+        spec["paths"] = [os.path.join(home, ".cline/data/globalState.json")]
+        ok, message, path = guard.state_seed("cline")
+        if not ok:
+            return False, "seeding failed: %s" % message
+        data = guard.read_json(path)
+        settings = data.get("autoApprovalSettings") or {}
+        actions = settings.get("actions") or {}
+        off = [name for name in ("readFilesExternally", "editFilesExternally",
+                                 "executeAllCommands", "useMcp")
+               if actions.get(name) is not True]
+        if off:
+            return False, "a seeded install leaves %s off" % ", ".join(off)
+        if settings.get("enabled") is not True:
+            return False, "the seeded block is not enabled"
+        # a second apply must be a no-op, not a duplicate-key write
+        ok2, message2, _ = guard.state_apply("cline")
+        if not ok2 or message2 != "already in place":
+            return False, "a second apply was not idempotent: %s" % message2
+        data2 = guard.read_json(path)
+        if data2.get("autoApprovalSettings") != settings:
+            return False, "the second apply mutated an already-correct file"
+        return True, "a fresh launch starts with the block on"
+    finally:
+        guard.HOME = saved
+        spec["paths"] = original
+        shutil.rmtree(home, ignore_errors=True)
+
+
+def check_hermes_scope_survives_a_new_session(claim):
+    """The scope must live in config, not in a prefill that the next session lacks."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        import guard
+    except ImportError:
+        return False, "guard.py does not import"
+    spec = guard.PROMPT_OVERLAYS.get("hermes")
+    if not spec:
+        return False, "hermes is not in PROMPT_OVERLAYS"
+    if spec["key"] != "agent.system_prompt":
+        return False, "the overlay is not written to agent.system_prompt"
+    written = guard.overlay_block(spec["text"])
+    if guard.OVERLAY_BEGIN not in written or guard.OVERLAY_END not in written:
+        return False, "the overlay has no markers, so restore cannot cut it"
+    real = guard.overlay_report("hermes")
+    if not real.get("overlay"):
+        return False, "the overlay is not in the live ~/.hermes/config.yaml"
+    return True, "the scope is carried by agent.system_prompt on every turn"
 
 
 def check_guard_settings_are_real(claim):
@@ -1657,6 +1741,8 @@ CHECKS = {
     "adapters_have_no_refusal_triggers": check_adapters_have_no_refusal_triggers,
     "god_mode_panel": check_god_mode_panel,
     "guard_layer_covers_agents": check_guard_layer_covers_agents,
+    "cline_guard_survives_a_fresh_launch": check_cline_guard_survives_a_fresh_launch,
+    "hermes_scope_survives_a_new_session": check_hermes_scope_survives_a_new_session,
     "guard_settings_are_real": check_guard_settings_are_real,
     "guard_backup_and_restore": check_guard_backup_and_restore,
     "proxy_serves_both_shapes": check_proxy_serves_both_shapes,
